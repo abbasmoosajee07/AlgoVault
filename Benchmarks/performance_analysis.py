@@ -122,7 +122,7 @@ def create_table(file_info, times_taken, peak_memory_usage, num_iterations, year
 
     # Add additional info
     table_lines.append("\n")
-    table_lines.append(f"Year: {year}, Iterations: {num_iterations}")
+    table_lines.append(f"Challenge: {year}, Iterations: {num_iterations}")
 
     # Create a DataFrame from the collected data
     df = pd.DataFrame(data_for_df, columns=headers)

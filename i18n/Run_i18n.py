@@ -1,8 +1,8 @@
-# Challenge - 2024
-# # Solved in {2024}
-# Puzzle Link: https://challenge.com/event/2024/
-# Solution by: [author]
-# Brief: [Run all 2024 scripts]
+# Challenge - 2025
+# # Solved in {2025}
+# Puzzle Link: https://i18n-puzzles.com/
+# Solution by: [Abbas Moosajee]
+# Brief: [Run all 2025 scripts]
 
 #!/usr/bin/env python3
 import os

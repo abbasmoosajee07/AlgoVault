@@ -118,7 +118,7 @@ def create_plot(df, challenge, Year, Iters, save_dir, center_color="#4CAF50", sc
     ax.set_xticks(days)
     ax.set_xticklabels([f'Day {int(day)}' for day in days], rotation=45, ha='right')  # Ensure days are displayed as integers
     ax.set_ylabel(f"({scale.capitalize()} Scale) Average Time (ms)", fontsize=14)
-    ax.set_title(f'{challenge}: Year {Year}',
+    ax.set_title(f'{challenge}: {Year}',
                     fontsize=21, fontweight='bold')
 
     # Add grid and legend
@@ -134,7 +134,7 @@ def create_plot(df, challenge, Year, Iters, save_dir, center_color="#4CAF50", sc
         plt.Line2D([0], [0], color='white', label=f"Scale: {scale.capitalize()}"),
         plt.Line2D([0], [0], color='white', label=f"Iterations: {Iters}"),
         plt.Line2D([0], [0], color='white', label=f"Peak Memory (PM): {total_mem:.2f} MB"),
-        plt.Line2D([0], [0], color='white', label=f"Avg Year Run Time: {total_time/1000:.2f} s"),
+        plt.Line2D([0], [0], color='white', label=f"Avg Run Time: {total_time/1000:.2f} s"),
     ]
 
     # Existing legend items (e.g., for average, median, max, min)

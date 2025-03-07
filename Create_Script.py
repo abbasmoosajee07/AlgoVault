@@ -41,7 +41,7 @@ def generate_header(day, year, author):
     month = time.strftime('%b', current_time)
 
     # Construct the header content
-    header = f"""Challenge Code - Day {day}, Year {year}
+    header = f"""i18n Puzzles - Puzzle {day}
 Solution Started: {month} {current_time.tm_mday}, {current_time.tm_year}
 Puzzle Link: https://i18n-puzzles.com/puzzle/{day}/
 Solution by: {author}
