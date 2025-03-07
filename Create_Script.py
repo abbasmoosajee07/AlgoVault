@@ -9,9 +9,9 @@ from Polyglot_Setups.Setup_Ruby import create_ruby_script
 from Polyglot_Setups.Setup_Txt import create_txt_file
 
 # Define default values for variables within the script
-day = 2
-year = 2024
-author_name = "your_name"
+day = 1
+year = "i18n"
+author_name = "Abbas Moosajee"
 
 # Define a dictionary for language options
 language_script_create_functions = {
@@ -22,7 +22,7 @@ language_script_create_functions = {
 }
 
 # Define the selected language/script type (change this variable as needed)
-selected_language = "c"  # Choose between "python", "c", "julia", "ruby"
+selected_language = "python"  # Choose between "python", "c", "julia", "ruby"
 repo_dir = os.path.dirname(os.path.abspath(__file__))
 def generate_header(day, year, author):
     """
@@ -43,7 +43,7 @@ def generate_header(day, year, author):
     # Construct the header content
     header = f"""Challenge Code - Day {day}, Year {year}
 Solution Started: {month} {current_time.tm_mday}, {current_time.tm_year}
-Puzzle Link: https://challengecode.com/{year}/day/{day}
+Puzzle Link: https://i18n-puzzles.com/puzzle/{day}/
 Solution by: {author}
 Brief: [Code/Problem Description]
 """

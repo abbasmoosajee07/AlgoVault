@@ -10,7 +10,7 @@ from Benchmarks.execute_challenge import execute_challenge_scripts
 
 if __name__ == "__main__":
     # Define constants
-    YEAR = 2024
+    YEAR = "i18n"
     CHALLENGE_NAME = 'Challenge'
     DAYS_TO_RUN = range(1, 26)
     COLOR_2024 = "#673147"

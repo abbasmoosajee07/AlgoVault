@@ -5,7 +5,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
 from matplotlib.cm import ScalarMappable
-matplotlib.use('Qt5Agg')  # Non-GUI backend
+# matplotlib.use('Qt5Agg')  # Non-GUI backend
 
 def generate_gradient_around_color(center_color, num_steps=10):
     """Create a gradient around the given center color."""
