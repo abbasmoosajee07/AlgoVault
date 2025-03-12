@@ -8,5 +8,5 @@ This repository contains coding solutions for the i18n puzzles.
 2. **Puzzle 2 - Detecting gravitational waves**: Simple timezone counter, but did enjoy the shifting part of the timezones.
 3. **Puzzle 3- Unicode Passwords**: Validating passwords to ensure they meet a certain set of criteria.
 4. **Puzzle 4- A trip around the world**: Calculating travel time, fairly simple time math using datetime and zoneinfo
-
+5. **Puzzle 5- Don't step in it...**: Fairly simple but definitely helped by python's handling of emojis, alternative handling in Java or C# would be interesting.
 ---
