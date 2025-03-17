@@ -12,4 +12,5 @@ This repository contains coding solutions for the i18n puzzles.
 6. **Puzzle 6- Mojibake puzzle dictionary**: Fairly simple problem of matching words, once you make sure you have copied the input correctly. Took a while to realize that.
 7. **Puzzle 7- The audit trail fixer**: Handling timezones and daylight saving shifts, definitely a guiding direction.
 8. **Puzzle 8- Unicode passwords redux**: Validating passwords fairly simple, once I figured out how to normalise the letter.
+10. **Puzzle 10- Unicode passwords strike back!**: Validating a series of login attempts by checking passwords, using the bcrypt algorithm.
 ---
