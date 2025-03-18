@@ -13,4 +13,5 @@ This repository contains coding solutions for the i18n puzzles.
 7. **Puzzle 7- The audit trail fixer**: Handling timezones and daylight saving shifts, definitely a guiding direction.
 8. **Puzzle 8- Unicode passwords redux**: Validating passwords fairly simple, once I figured out how to normalise the letter.
 10. **Puzzle 10- Unicode passwords strike back!**: Validating a series of login attempts by checking passwords, using the bcrypt algorithm.
+11. **Puzzle 11= Homer's Cipher**: Decoding a coded message that was fairly simple, except for the way sigma is handled still confused about that.
 ---
