@@ -2,7 +2,7 @@
 Solution Started: Mar 17, 2025
 Puzzle Link: https://i18n-puzzles.com/puzzle/11/
 Solution by: Abbas Moosajee
-Brief: [Code/Problem Description]
+Brief: [Homer's Cipher]
 """
 
 #!/usr/bin/env python3
