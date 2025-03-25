@@ -2,7 +2,7 @@
 Solution Started: Mar 16, 2025
 Puzzle Link: https://i18n-puzzles.com/puzzle/9/
 Solution by: Abbas Moosajee
-Brief: [Code/Problem Description]
+Brief: [Nine Eleven]
 """
 
 #!/usr/bin/env python3

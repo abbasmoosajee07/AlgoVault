@@ -12,6 +12,8 @@ This repository contains coding solutions for the i18n puzzles.
 6. **Puzzle 6- Mojibake puzzle dictionary**: Fairly simple problem of matching words, once you make sure you have copied the input correctly. Took a while to realize that.
 7. **Puzzle 7- The audit trail fixer**: Handling timezones and daylight saving shifts, definitely a guiding direction.
 8. **Puzzle 8- Unicode passwords redux**: Validating passwords fairly simple, once I figured out how to normalise the letter.
+9. **Puzzle 9- Nine Eleven**: Identifying the correct date format used, and highlighting the importance of a single global standard
 10. **Puzzle 10- Unicode passwords strike back!**: Validating a series of login attempts by checking passwords, using the bcrypt algorithm.
-11. **Puzzle 11= Homer's Cipher**: Decoding a coded message that was fairly simple, except for the way sigma is handled still confused about that.
+11. **Puzzle 11- Homer's Cipher**: Decoding a coded message that was fairly simple, except for the way sigma is handled still confused about that.
+12. **Puzzle 12- Sorting It Out**: Sorting it out a list of names in a phone directory
 ---
