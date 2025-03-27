@@ -16,4 +16,5 @@ This repository contains coding solutions for the i18n puzzles.
 10. **Puzzle 10- Unicode passwords strike back!**: Validating a series of login attempts by checking passwords, using the bcrypt algorithm.
 11. **Puzzle 11- Homer's Cipher**: Decoding a coded message that was fairly simple, except for the way sigma is handled still confused about that.
 12. **Puzzle 12- Sorting It Out**: Sorting it out a list of names in a phone directory
+13. **Puzzle 13- Gulliver's puzzle dictionary**: Fairly similar to Puzzle 6, except for identifying the correct encoding.
 ---
