@@ -17,4 +17,5 @@ This repository contains coding solutions for the i18n puzzles.
 11. **Puzzle 11- Homer's Cipher**: Decoding a coded message that was fairly simple, except for the way sigma is handled still confused about that.
 12. **Puzzle 12- Sorting It Out**: Sorting it out a list of names in a phone directory
 13. **Puzzle 13- Gulliver's puzzle dictionary**: Fairly similar to Puzzle 6, except for identifying the correct encoding.
+14. **Puzzle 14- Metrification in Japan**: Quite fun learning about a different number system, however, debugging and handling of fractions took a second
 ---
