@@ -1,4 +1,4 @@
-Metadata-Version: 2.2
+Metadata-Version: 2.4
 Name: Benchmarks
 Version: 0.1
 License-File: LICENSE.txt
@@ -6,4 +6,5 @@ Requires-Dist: psutil
 Requires-Dist: numpy
 Requires-Dist: pandas
 Requires-Dist: matplotlib
+Dynamic: license-file
 Dynamic: requires-dist

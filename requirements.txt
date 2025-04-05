@@ -35,3 +35,4 @@ wcwidth==0.2.13
 pyqt5==5.15.11
 setuptools
 matplotlib
+bcrypt
