@@ -9,8 +9,8 @@ from Polyglot_Setups.Setup_Ruby import create_ruby_script
 from Polyglot_Setups.Setup_Txt import create_txt_file
 
 # Define default values for variables within the script
-day = 1
-year = "i18n"
+day = 4
+year = "Codyssi"
 author_name = "Abbas Moosajee"
 
 # Define a dictionary for language options
@@ -41,13 +41,20 @@ def generate_header(day, year, author):
     month = time.strftime('%b', current_time)
 
     # Construct the header content
-    header = f"""i18n Puzzles - Puzzle {day}
-Solution Started: {month} {current_time.tm_mday}, {current_time.tm_year}
-Puzzle Link: https://i18n-puzzles.com/puzzle/{day}/
-Solution by: {author}
-Brief: [Code/Problem Description]
-"""
-    return header
+    header_dict = {
+    "Codyssi" : f"""Codyssi Puzzles - Problem {day}
+    Solution Started: {month} {current_time.tm_mday}, {current_time.tm_year}
+    Puzzle Link: https://www.codyssi.com/view_problem_{4+day}?
+    Solution by: {author}
+    Brief: [Code/Problem Description]
+    """,
+    "i18n": """i18n Puzzles - Puzzle {day}
+    Solution Started: {month} {current_time.tm_mday}, {current_time.tm_year}
+    Puzzle Link: https://i18n-puzzles.com/puzzle/%7Bday%7D/
+    Solution by: {author}
+    Brief: [Code/Problem Description]
+    """}
+    return header_dict[year]
 
 def main():
     """
