@@ -43,17 +43,17 @@ def generate_header(day, year, author):
     # Construct the header content
     header_dict = {
     "Codyssi" : f"""Codyssi Puzzles - Problem {day}
-    Solution Started: {month} {current_time.tm_mday}, {current_time.tm_year}
-    Puzzle Link: https://www.codyssi.com/view_problem_{4+day}?
-    Solution by: {author}
-    Brief: [Code/Problem Description]
-    """,
+Solution Started: {month} {current_time.tm_mday}, {current_time.tm_year}
+Puzzle Link: https://www.codyssi.com/view_problem_{4+day}?
+Solution by: {author}
+Brief: [Code/Problem Description]
+""",
     "i18n": """i18n Puzzles - Puzzle {day}
-    Solution Started: {month} {current_time.tm_mday}, {current_time.tm_year}
-    Puzzle Link: https://i18n-puzzles.com/puzzle/%7Bday%7D/
-    Solution by: {author}
-    Brief: [Code/Problem Description]
-    """}
+Solution Started: {month} {current_time.tm_mday}, {current_time.tm_year}
+Puzzle Link: https://i18n-puzzles.com/puzzle/%7Bday%7D/
+Solution by: {author}
+Brief: [Code/Problem Description]
+"""}
     return header_dict[year]
 
 def main():
