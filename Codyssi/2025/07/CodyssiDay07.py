@@ -8,9 +8,6 @@ Brief: [Siren Disruption]
 #!/usr/bin/env python3
 
 import os, re, copy
-import numpy as np
-import pandas as pd
-import matplotlib.pyplot as plt
 
 # Load the input data from the specified file path
 D07_file = "Day07_input.txt"
@@ -41,13 +38,42 @@ for swap_idx, (track_x, track_y) in enumerate(swap_tracks):
     frequencies_p2 = swap_freq_p2.copy()
 print("Part 2:", frequencies_p2[test_index])
 
+def swap_tracks_func(freq_dict: dict, swaps: tuple) -> dict:
+    track_x, track_y = swaps
+    swap_freq = freq_dict.copy()
+
+    # Convert to list of track numbers (assuming 1-based and consecutive)
+    track_nums = list(freq_dict.keys())
+    n = len(track_nums)
+
+    # Ensure X and Y are valid tracks
+    if track_x not in freq_dict or track_y not in freq_dict:
+        return swap_freq
+
+    # Index positions (0-based) for X and Y in the sorted track list
+    ix = track_nums.index(track_x)
+    iy = track_nums.index(track_y)
+
+    # Find the maximum block size
+    max_block = 0
+    while (ix + max_block < n and iy + max_block < n and
+            track_nums[ix + max_block] == track_nums[ix] + max_block and
+            track_nums[iy + max_block] == track_nums[iy] + max_block and
+            abs((track_nums[ix + max_block]) - (track_nums[iy + max_block])) >= max_block + 1):
+        max_block += 1
+
+    # Perform the block-wise swap
+    for i in range(max_block):
+        tx = track_nums[ix + i]
+        ty = track_nums[iy + i]
+        swap_freq[tx], swap_freq[ty] = swap_freq[ty], swap_freq[tx]
+
+    return swap_freq
 
 frequencies_p3 = copy.deepcopy(og_frequencies)
-for swap_idx, (track_x, track_y) in enumerate(swap_tracks):
-    track_z = swap_tracks[((swap_idx + 1) % len(swap_tracks))][0]
-    swap_freq_p3 = frequencies_p3.copy()
-    swap_freq_p3[track_x] = frequencies_p3[track_z]
-    swap_freq_p3[track_y] = frequencies_p3[track_x]
-    swap_freq_p3[track_z] = frequencies_p3[track_y]
-    frequencies_p3 = swap_freq_p3.copy()
+for swap_idx, swap_inst in enumerate(swap_tracks):
+    # print("\nBefore:", list(frequencies_p3.values()))
+    # print(f"swap {swap_idx + 1}: {swap_inst}")
+    frequencies_p3 = swap_tracks_func(frequencies_p3,swap_inst)
+    # print("After:", list(frequencies_p3.values()))
 print("Part 3:", frequencies_p3[test_index])

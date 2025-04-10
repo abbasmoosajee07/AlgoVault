@@ -9,5 +9,5 @@
 4. **Problem 4 - Aeolian Transmissions**: Tracking memory of files and identifying different compression for the file.
 5. **Problem 5 - Patron Islands**: Calculating manhattan distances between a series of 2D coordinates.
 6. **Problem 6 - Lotus Scramble**: Characterising the data in a file, and calculating its value.
+7. **Problem 7 - Siren Disruption**: Reordering a list of numbers based on a series of instructions
 ---
-
