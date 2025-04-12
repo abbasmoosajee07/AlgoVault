@@ -49,48 +49,66 @@ class AccountManager:
         sorted_balances = sorted(acc_dict.values(), reverse=True)
         return sum(sorted_balances[:3])
 
+    @staticmethod
+    def settle_all_debts(acc_dict, debt_dict):
+        progress = True
+        while progress:
+            progress = False
+            updated_debt_dict = {}
+
+            for account in list(debt_dict.keys()):
+                debts = debt_dict[account]    # Outstading debts to be paid
+                available = acc_dict[account] # Available Balance
+                new_debts = []                # Remaining Debts
+
+                for pay_to, debt_amt in debts:
+                    if available == 0:        # Could not make a payment
+                        new_debts.append((pay_to, debt_amt))
+                        continue
+
+                    if debt_amt <= available: # Completed Debt
+                        acc_dict[account] -= debt_amt
+                        acc_dict[pay_to] += debt_amt
+                        available -= debt_amt
+                        progress = True
+                    else:                     # Made Partial Debt Payment
+                        acc_dict[account] -= available
+                        acc_dict[pay_to] += available
+                        new_debts.append((pay_to, debt_amt - available))
+                        available = 0
+                        progress = True
+
+                if new_debts:
+                    updated_debt_dict[account] = new_debts
+
+            debt_dict.clear()
+            debt_dict.update(updated_debt_dict)
+
+            return acc_dict, debt_dict
+
     def balance_books(self):
         acc_dict = self.original_acc_dict.copy()
         debt_dict = {}
-        og_cash = sum(acc_dict.values())
-        time_created = 0
-        for (from_acc, to_acc, amt) in transac_list:
-            # print(f"{from_acc} -> {to_acc} for {amt}")
+
+        for (from_acc, to_acc, amt) in transac_list[:]:
             avail_val = acc_dict[from_acc]
-            time_created += 1
+
             if amt > avail_val:
-                acc_dict[from_acc] -= avail_val
-                balance_payable = avail_val
-                debt_dict.setdefault(from_acc, []).append((time_created, to_acc, amt - avail_val))
+                acc_dict[from_acc] = 0
+                acc_dict[to_acc] += avail_val
+                debt_dict.setdefault(from_acc, []).append((to_acc, amt - avail_val))
             else:
                 acc_dict[from_acc] -= amt
-                balance_payable = amt
+                acc_dict[to_acc] += amt
 
-            debts_avail = sorted(debt_dict.get(to_acc, []), key=lambda x: x[0])
-            debt_dict[to_acc] = []
+            # Settle all possible debts after this transaction
+            acc_dict, debt_dict = self.settle_all_debts(acc_dict, debt_dict)
 
-            while balance_payable > 0 and debts_avail:
-                debt_time, pay_to, debt_amt = debts_avail.pop(0)
-                if debt_amt > balance_payable:
-                    debt_rem = debt_amt - balance_payable
-                    balance_payable -= debt_rem
-                    debt_dict.setdefault(to_acc, []).append((debt_time, pay_to, debt_rem))
-                    acc_dict[pay_to] += balance_payable
-                else:
-                    acc_dict[pay_to] += debt_amt
-                    balance_payable -= debt_amt
-            acc_dict[to_acc] += balance_payable
-            total_cash = sum(acc_dict.values())
-            debt_owed = sum([debt for line in debt_dict.values() for (_, _, debt) in line])
-            # print(f"{og_cash=} == {total_cash=} {debt_owed=} balance={total_cash-debt_owed}\n")
-        # print(debt_dict)
-        # print(acc_dict)
         sorted_balances = sorted(acc_dict.values(), reverse=True)
-
         return sum(sorted_balances[:3])
 
 manager = AccountManager(acc_dict, transac_list)
 print("Part 1:", manager.complete_transactions(False))
 print("Part 2:", manager.complete_transactions(True))
-print("Part 3:", manager.balance_books()) # 2511
+print("Part 3:", manager.balance_books())
 
