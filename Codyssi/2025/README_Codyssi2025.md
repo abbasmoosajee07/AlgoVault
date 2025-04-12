@@ -11,5 +11,6 @@
 6. **Problem 6 - Lotus Scramble**: Characterising the data in a file, and calculating its value.
 7. **Problem 7 - Siren Disruption**: Reordering a list of numbers based on a series of instructions
 8. **Problem 8 - Risky Shortcut**: Reduced string based on properties of surrounding characters.
-9. **Problem 9 - Windy Bargain**: Basic accounting, keeping track of cash and balancing the books
+9. **Problem 9 - Windy Bargain**: Basic accounting, keeping track of cash and balancing the books.
+10. **Problem 10 - Cyclops Chaos**: Path finding through agrid, looking for safest path using heapq and basic method.
 ---
