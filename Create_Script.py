@@ -9,7 +9,7 @@ from Polyglot_Setups.Setup_Ruby import create_ruby_script
 from Polyglot_Setups.Setup_Txt import create_txt_file
 
 # Define default values for variables within the script
-day = 4
+day = 12
 year = "Codyssi"
 author_name = "Abbas Moosajee"
 
