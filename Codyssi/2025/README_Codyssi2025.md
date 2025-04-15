@@ -14,5 +14,5 @@
 9. **Problem 9 - Windy Bargain**: Basic accounting, keeping track of cash and balancing the books.
 10. **Problem 10 - Cyclops Chaos**: Path finding through agrid, looking for safest path using heapq and basic method.
 11. **Problem 11 - Games in a Storm**: Reading numbers from different base and converting them to a target base, plus identifying the min base for any number of a target length.
-12. **Problem 12 - Challenging the Whirlpool**: Performing a series of ADD/SUB/MULT ops on a grid of numbers.
+12. **Problem 12 - Challenging the Whirlpool**: Performing a series of ADD/SUB/MULT ops on a grid of numbers, and then manipulating the instruction list based on control actions.
 ---

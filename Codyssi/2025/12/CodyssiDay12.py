@@ -24,10 +24,9 @@ with open(D12_file_path) as file:
     control_actions = input_data[2].split('\n')
 
 class CharybdisWhirlpool:
-    def __init__(self, grid: list[list[int]], instructions: list[str], actions: list[str]):
+    def __init__(self, grid: list[list[int]], instructions: list[str]):
         self.grid_array = np.array(grid)
         self.instructions = instructions
-        self.control_actions = actions
 
     @staticmethod
     def rotate_list(nums, k):
@@ -35,9 +34,15 @@ class CharybdisWhirlpool:
         rotated = np.concatenate((nums[-k:], nums[:-k]))  # concatenate arrays
         return rotated
 
-    def perform_instructions(self, instructions: list[str], num_grid = None):
-        grid_array = self.grid_array.copy() if not num_grid else np.array(num_grid.copy())
-        print(grid_array)
+    @staticmethod
+    def calculate_property_sum(grid: list[list[int]], sum_prop: str = "max"):
+        if sum_prop == "max":
+            return  max(np.sum(grid, axis=num).max() for num in [0, 1])
+        elif sum_prop == "min":
+            return  min(np.sum(grid, axis=num).min() for num in [0, 1])
+
+    def perform_instructions(self, instructions, num_grid):
+        grid_array = np.array(num_grid.copy())
         for command in instructions:
             cmd_list = command.split()
             op = cmd_list[0]
@@ -92,9 +97,54 @@ class CharybdisWhirlpool:
 
         return grid_array
 
-monster = CharybdisWhirlpool(num_grid, instructions, control_actions)
+    def perform_control_actions(self, control_actions: list[str]):
+        grid = self.grid_array.copy()
+        instruc_list = self.instructions.copy()
+        taken_actions = []
+        for action in control_actions:
+            if action == "TAKE":
+                if instruc_list:
+                    taken_actions = [instruc_list.pop(0)]
+            elif action == "CYCLE":
+                if taken_actions:
+                    instruc_list.append(taken_actions.pop())
+            elif action == "ACT":
+                if taken_actions:
+                    grid = self.perform_instructions(taken_actions, grid)
+                    taken_actions = []
+        return grid
 
-grid_p1 = monster.perform_instructions(instructions)
-maxsum_p1 = max(np.sum(grid_p1, axis=num).max() for num in [0, 1])
+    def perform_all_actions(self, control_actions: list[str]):
+        grid = self.grid_array.copy()
+        instruc_list = self.instructions.copy()
+        taken_actions = []
+        action_idx = 0
+        while instruc_list or taken_actions:
+            action = control_actions[action_idx]
+            if action == "TAKE":
+                if instruc_list:
+                    taken_actions = [instruc_list.pop(0)]
+            elif action == "CYCLE":
+                if taken_actions:
+                    instruc_list.append(taken_actions.pop())
+            elif action == "ACT":
+                if taken_actions:
+                    grid = self.perform_instructions(taken_actions, grid)
+                    taken_actions = []
+            action_idx = (action_idx + 1) % len(control_actions)
+        return grid
+
+monster = CharybdisWhirlpool(num_grid, instructions)
+
+grid_p1 = monster.perform_instructions(instructions, num_grid)
+maxsum_p1 = monster.calculate_property_sum(grid_p1)
 print("Part 1:", maxsum_p1)
+
+grid_p2 = monster.perform_control_actions(control_actions)
+maxsum_p2 = monster.calculate_property_sum(grid_p2)
+print("Part 2:", maxsum_p2)
+
+grid_p3 = monster.perform_all_actions(control_actions)
+maxsum_p3 = monster.calculate_property_sum(grid_p3)
+print("Part 3:", maxsum_p3)
 
