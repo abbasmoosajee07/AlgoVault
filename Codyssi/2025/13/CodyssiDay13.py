@@ -61,3 +61,14 @@ def find_weighted_paths(graph, start):
 
 shortest_paths = find_weighted_paths(loc_graph, 'STT')
 print("Part 2:", np.prod(sorted(shortest_paths.values())[-3:]))
+
+def identify_cycles(paths, graph):
+    cycle_lens = [0]
+    possible_cycles = {}
+    for start, nodes in graph.items():
+        print(start, nodes)
+    return cycle_lens
+
+print(ship_paths)
+cycle_lens = identify_cycles(ship_paths, loc_graph)
+print("Part 3:", max(cycle_lens))
