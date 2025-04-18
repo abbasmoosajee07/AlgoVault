@@ -12,7 +12,7 @@ import numpy as np
 from collections import defaultdict, deque
 
 # Load the input data from the specified file path
-D13_file = "Day13_input1.txt"
+D13_file = "Day13_input.txt"
 D13_file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), D13_file)
 
 # Read and sort input data into a grid
@@ -62,13 +62,19 @@ def find_weighted_paths(graph, start):
 shortest_paths = find_weighted_paths(loc_graph, 'STT')
 print("Part 2:", np.prod(sorted(shortest_paths.values())[-3:]))
 
-def identify_cycles(paths, graph):
-    cycle_lens = [0]
-    possible_cycles = {}
-    for start, nodes in graph.items():
-        print(start, nodes)
+def identify_cycles(graph):
+    def dfs(node, start, path, total):
+        for dest, dist in graph.get(node, []):
+            if dest == start:
+                # Found a cycle
+                cycle_lens.append(total + dist)
+            elif dest not in path:
+                dfs(dest, start, path + [dest], total + dist)
+
+    cycle_lens = []
+    for start in graph:
+        dfs(start, start, [start], 0)
     return cycle_lens
 
-print(ship_paths)
-cycle_lens = identify_cycles(ship_paths, loc_graph)
+cycle_lens = identify_cycles(loc_graph)
 print("Part 3:", max(cycle_lens))
