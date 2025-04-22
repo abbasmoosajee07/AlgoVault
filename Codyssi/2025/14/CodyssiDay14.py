@@ -15,7 +15,7 @@ import matplotlib.pyplot as plt
 start_time = time.time()
 
 # Load the input data from the specified file path
-D14_file = "Day14_input.txt"
+D14_file = "Day14_input1.txt"
 D14_file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), D14_file)
 
 # Read and sort input data into a grid
@@ -55,32 +55,21 @@ class Synthesiser:
         else:
             return (0, 0)
 
+    def optimal_combo(self):
+        item_list = self.items_dict
+        elements = list(item_list.keys())
+        print(item_list)
+        for item in elements:
+            cost = item
+        return
+
     def optimal_combinations(self, spend_units: int):
 
         items = self.items_dict
-        elements = list(items.keys())
         top_k = 50
         heap = []
-        current_combinations = []
-
-        # for num in range(2, 15):
-        #     for pair in itertools.combinations(elements, num):
-        #         quality, unique = self.validate_combo(pair, spend_units)
-        #         score = quality * unique
-        #         if len(heap) < top_k:
-        #             heapq.heappush(heap, (score, pair))
-        #         else:
-        #             heapq.heappushpop(heap, (score, pair))
-
-        # def score_pair(pair):
-        #     quality, unique = self.validate_combo(pair, spend_units)
-        #     return quality * unique
-
-        # with ThreadPoolExecutor() as executor:
-        #     for num in range(2, 10):
-        #         groupings = itertools.combinations(elements, num)
-        #         current_combinations.extend(executor.map(score_pair, groupings))
-
+        current_combinations = [0]
+        self.optimal_combo()
         return current_combinations
 
 synth = Synthesiser(input_data)
@@ -89,6 +78,6 @@ ranked_items = synth.count_unique_materials()
 print("Part 1:", sum(ranked_items[-5:,2]))
 
 opt_materials = synth.optimal_combinations(30)
-print("Part 2:", max(opt_materials))
+print("Part 2:", opt_materials)
 
 print(f"Execution Time = {time.time() - start_time:.5f}s")
