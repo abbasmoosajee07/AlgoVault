@@ -55,7 +55,7 @@ class Synthesiser:
         else:
             return (0, 0)
 
-    def optimal_combo(self):
+    def optimal_combo(self, combo_list):
         item_list = self.items_dict
         elements = list(item_list.keys())
         print(item_list)
@@ -66,10 +66,9 @@ class Synthesiser:
     def optimal_combinations(self, spend_units: int):
 
         items = self.items_dict
-        top_k = 50
-        heap = []
+        queue = []
         current_combinations = [0]
-        self.optimal_combo()
+        self.optimal_combo(queue)
         return current_combinations
 
 synth = Synthesiser(input_data)
