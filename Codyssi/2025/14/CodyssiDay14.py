@@ -7,15 +7,14 @@ Brief: [Crucial Crafting]
 
 #!/usr/bin/env python3
 
-import os, re, copy, itertools, time, heapq
-from concurrent.futures import ThreadPoolExecutor
+import os, re, copy, itertools, time
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 start_time = time.time()
 
 # Load the input data from the specified file path
-D14_file = "Day14_input1.txt"
+D14_file = "Day14_input.txt"
 D14_file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), D14_file)
 
 # Read and sort input data into a grid
@@ -44,33 +43,29 @@ class Synthesiser:
         sorted_items = sorted(items_array, key=lambda row: (row[0], row[1]))
         return np.array(sorted_items)
 
-    def validate_combo(self, combo_materials: list[str], avail_cost: int):
-        synth_items = np.array([self.items_dict[mat] for mat in combo_materials])
-        total_qlty = sum(synth_items[:,0])
-        total_cost = sum(synth_items[:,1])
-        reqd_mats = sum(synth_items[:,2])
-        if total_cost <= avail_cost:
-            # print(total_qlty, reqd_mats, total_cost)
-            return (total_qlty, reqd_mats)
-        else:
-            return (0, 0)
-
-    def optimal_combo(self, combo_list):
-        item_list = self.items_dict
-        elements = list(item_list.keys())
-        print(item_list)
-        for item in elements:
-            cost = item
-        return
-
     def optimal_combinations(self, spend_units: int):
+        """
+        Dynamic programming to find best combination within spend_units
+        """
+        dp = [(-1, float('inf'))] * (spend_units + 1)  # (quality, unique_materials)
+        dp[0] = (0, 0)  # base case: 0 cost, 0 quality, 0 materials
 
-        items = self.items_dict
-        queue = []
-        current_combinations = [0]
-        self.optimal_combo(queue)
-        return current_combinations
+        for (quality, cost, unique) in self.items_dict.values():
+            for c in range(spend_units, cost - 1, -1):
+                prev_quality, prev_unique = dp[c - cost]
+                if prev_quality != -1:  # only proceed if previous state is valid
+                    new_quality = prev_quality + quality
+                    new_unique = prev_unique + unique
+                    if (new_quality > dp[c][0]) or (new_quality == dp[c][0] and new_unique < dp[c][1]):
+                        dp[c] = (new_quality, new_unique)
 
+        # Find the best result across all dp[cost] where cost <= spend_units
+        best_quality, best_unique = max(dp, key=lambda x: (x[0], -x[1]))
+
+        if best_quality <= 0:
+            return 0  # no valid combination
+
+        return best_quality * best_unique
 synth = Synthesiser(input_data)
 
 ranked_items = synth.count_unique_materials()
