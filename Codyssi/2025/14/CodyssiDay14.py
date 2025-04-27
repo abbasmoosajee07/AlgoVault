@@ -7,10 +7,8 @@ Brief: [Crucial Crafting]
 
 #!/usr/bin/env python3
 
-import os, re, copy, itertools, time
+import os, re, copy, time
 import numpy as np
-import pandas as pd
-import matplotlib.pyplot as plt
 start_time = time.time()
 
 # Load the input data from the specified file path
@@ -56,7 +54,8 @@ class Synthesiser:
                 if prev_quality != -1:  # only proceed if previous state is valid
                     new_quality = prev_quality + quality
                     new_unique = prev_unique + unique
-                    if (new_quality > dp[c][0]) or (new_quality == dp[c][0] and new_unique < dp[c][1]):
+                    if (new_quality > dp[c][0]) or \
+                        (new_quality == dp[c][0] and new_unique < dp[c][1]):
                         dp[c] = (new_quality, new_unique)
 
         # Find the best result across all dp[cost] where cost <= spend_units
@@ -71,7 +70,10 @@ synth = Synthesiser(input_data)
 ranked_items = synth.count_unique_materials()
 print("Part 1:", sum(ranked_items[-5:,2]))
 
-opt_materials = synth.optimal_combinations(30)
-print("Part 2:", opt_materials)
+opt_materials_30 = synth.optimal_combinations(30)
+print("Part 2:", opt_materials_30)
 
-print(f"Execution Time = {time.time() - start_time:.5f}s")
+opt_materials_300 = synth.optimal_combinations(300)
+print("Part 3:", opt_materials_300)
+
+# print(f"Execution Time = {time.time() - start_time:.5f}s")
