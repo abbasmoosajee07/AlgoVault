@@ -20,30 +20,35 @@ D15_file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), D15_fil
 # Read and sort input data into a grid
 with open(D15_file_path) as file:
     input_data = file.read().strip().split('\n\n')
-    artifact_list = [(idx, nam, int(val)) for idx, line in enumerate(input_data[0].split('\n') )for nam, val in [line.split(' | ')]]
+    artifact_list = [(nam, int(val)) for idx, line in enumerate(input_data[0].split('\n') )for nam, val in [line.split(' | ')]]
     artifact_list1 = [(nam, int(val)) for line in input_data[1].split('\n') for nam, val in [line.split(' | ')]]
 
 class Archaeologist:
     def __init__(self, artifacts: list[tuple]):
-        self.artifacts = artifacts
-        self.artifact_dict = {val: name for _, name, val in artifacts}
+        self.artifact_list = artifacts
+        self.artifact_dict = {val: name for name, val in artifacts}
+
+    def __compare_nodes(self, artifact, root_node, layer):
+        code, id_val = artifact
+        print(self.tree)
+        if id_val < root_node[1]:
+            print("left", code, id_val)
+            # if 
+            self.tree[root_node[0]]["left"].append(code)
+        elif id_val > root_node[1]:
+            print("right", code, id_val)
+        else:
+            self.tree[code] = {"left": [], "right": []}
+            print(code, id_val)
+        return
 
     def build_tree(self):
-        tracked_artifacts = self.artifacts
-        tree = {}
-        root_node = self.artifacts[0]
-        layer = 0
-        while tracked_artifacts:
-            idx, code, id_value = tracked_artifacts.pop(0)
-            print(idx, code, id_value)
-            if id_value < root_node[2]:
-                layer += 1
-                tree.setdefault(layer, []).append(id_value)
-            elif id_value > root_node[2]:
-                layer -= 1
-                tree.setdefault(layer, []).append(id_value)
-        print(tree)
-        return 1
+        root_node = self.artifact_list[0]
+        self.tree = {}
+        for artifact in self.artifact_list[:2]:
+            self.__compare_nodes(artifact, root_node, 1)
+        print(self.tree)
+        return len(self.tree)
 
 expedition = Archaeologist(artifact_list)
 
