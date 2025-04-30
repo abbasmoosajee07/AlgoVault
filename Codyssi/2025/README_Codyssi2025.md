@@ -17,5 +17,5 @@
 12. **Problem 12 - Challenging the Whirlpool**: Performing a series of ADD/SUB/MULT ops on a grid of numbers, and then manipulating the instruction list based on control actions.
 13. **Problem 13 - Laestrygonian Guards**: Identifying paths between various destinations, and sorting based on lengths.
 14. **Problem 14 - Crucial Crafting**: Synthesising products based on different properties of materials, finding optimum combinations.
-15. **Problem 15 - Artifacts at Atlantis**:
+15. **Problem 15 - Artifacts at Atlantis**: Build a network of connected artifacts, and navigate across the layers to achieve desired goals.
 ---
