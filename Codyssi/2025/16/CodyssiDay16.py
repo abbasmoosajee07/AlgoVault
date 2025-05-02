@@ -7,10 +7,11 @@ Brief: [Leviathan Mindscape]
 
 #!/usr/bin/env python3
 
-import os, re, copy
+import os, re, copy, time
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+start_time = time.time()
 
 # Load the input data from the specified file path
 D16_file = "Day16_input.txt"
@@ -25,7 +26,7 @@ with open(D16_file_path) as file:
 class MindCube:
     def __init__(self, cube_faces: list[str]):
         cube_list = self.parse_input(cube_faces)
-        print(cube_list)
+
     @staticmethod
     def parse_input(input_faces):
         cube_list = []
@@ -37,4 +38,12 @@ class MindCube:
                 cube_list.append((parts[0], int(parts[1]), int(parts[-1])))
         return cube_list
 
+    def perform_transformations(self, instructions):
+        return len(instructions)
+
 cubes = MindCube(cube_faces)
+
+absorption = cubes.perform_transformations(directions)
+print("Part 1:", absorption)
+
+print(f"Execution Time = {time.time() - start_time:.5f}s")
