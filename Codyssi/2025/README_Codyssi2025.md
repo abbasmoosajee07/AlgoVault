@@ -18,5 +18,5 @@
 13. **Problem 13 - Laestrygonian Guards**: Identifying paths between various destinations, and sorting based on lengths.
 14. **Problem 14 - Crucial Crafting**: Synthesising products based on different properties of materials, finding optimum combinations.
 15. **Problem 15 - Artifacts at Atlantis**: Build a network of connected artifacts, and navigate across the layers to achieve desired goals.
-16. **Problem 16 - Leviathan Mindscape**: Build a cube and then navigate it based on a series of instructions.
+16. **Problem 16 - Leviathan Mindscape**: Build a 3D cube, add values to its tiles and twist it.
 ---
