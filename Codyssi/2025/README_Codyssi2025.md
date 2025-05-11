@@ -19,4 +19,5 @@
 14. **Problem 14 - Crucial Crafting**: Synthesising products based on different properties of materials, finding optimum combinations.
 15. **Problem 15 - Artifacts at Atlantis**: Build a network of connected artifacts, and navigate across the layers to achieve desired goals.
 16. **Problem 16 - Leviathan Mindscape**: Build a 3D cube, add values to its tiles and twist it.
+17. **Problem 17 - Spiralling Stairs**: Build a spiral staircase and identify valid number of paths.
 ---
