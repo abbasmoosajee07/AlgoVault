@@ -14,7 +14,7 @@ import matplotlib.pyplot as plt
 start_time = time.time()
 
 # Load the input data from the specified file path
-D17_file = "Day17_input1.txt"
+D17_file = "Day17_input.txt"
 D17_file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), D17_file)
 
 # Read and sort input data into a grid
@@ -33,14 +33,39 @@ class Staircase:
                     info_list[7], info_list[9])
         return useful
 
+    def __possible_steps(self, steps, valid_moves):
+        step_paths = {}
+        for step_idx, start_step in enumerate(steps):
+            fwd_steps = steps[step_idx + 1:]
+            for next_step in fwd_steps:
+                step_len = next_step - start_step
+                if step_len in valid_moves:
+                    step_paths.setdefault(start_step, []).append(next_step)
+        return step_paths
+
     def count_paths(self, possible_moves):
-        first, last = self.step_info[0], self.step_info[-1]
-        print(first, last)
-        return len(possible_moves)
+        start, end = self.step_info[0][1], self.step_info[0][2]
+        all_steps = list(range(start, end + 1))
+        step_dict = self.__possible_steps(all_steps, possible_moves)
+
+        history = {}
+
+        def dfs(current):
+            if current == end: # If current is final step, count 1
+                return 1
+            if current in history: # If current is in history return to that point
+                return history[current]
+            total = 0
+            for next_step in step_dict.get(current, []):
+                total += dfs(next_step)
+            history[current] = total
+            return total
+
+        return dfs(start)
 
 stairs = Staircase(steps)
 
 valid_paths = stairs.count_paths(possible_moves)
-print("Part 1:", valid_paths)
+print("Part 1:", (valid_paths))
 
 print(f"Execution Time = {time.time() - start_time:.5f}s")
