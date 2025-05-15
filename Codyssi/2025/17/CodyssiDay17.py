@@ -8,9 +8,6 @@ Brief: [Spiralling Stairs]
 #!/usr/bin/env python3
 
 import os, re, copy, time
-import numpy as np
-import pandas as pd
-import matplotlib.pyplot as plt
 start_time = time.time()
 
 # Load the input data from the specified file path
@@ -25,39 +22,21 @@ with open(D17_file_path) as file:
 
 class Staircase:
     def __init__(self, steps, possible_moves):
-        self.staircase_data = {data[0]: data for line in steps for data in [self.parse_step(line)]}
+        self.staircase_data = {data[0]: data for line in steps for data in [self.__parse_step(line)]}
         self.valid_moves = possible_moves
 
-    def parse_step(self, raw_info):
+        basic_structure = {}
+        for branch in self.staircase_data.values():
+            basic_structure = self.__build_staircase(basic_structure, branch)
+
+        self.basic_structure = copy.deepcopy(basic_structure)
+        self.validated_structure = self.__identify_shortcuts(basic_structure.copy())
+
+    def __parse_step(self, raw_info):
         info_list = raw_info.split()
         useful = (info_list[0], int(info_list[2]), int(info_list[4]),
                     info_list[7], info_list[9])
         return useful
-
-    def dfs(self, current, end, structure, history):
-        if current == end: # If current is final step, count 1
-            return 1
-        if current in history: # If current is in history return to that point
-            return history[current]
-        total = 0
-        for next_step in structure.get(current, []):
-            total += self.dfs(next_step, end, structure, history)
-        history[current] = total
-        return total
-
-    def single_stair_paths(self, target_step):
-
-        start, end = self.staircase_data[target_step][1], self.staircase_data[target_step][2]
-        all_steps = list(range(start, end + 1))
-        step_dict = {}
-        for step_idx, start_step in enumerate(all_steps):
-            fwd_steps = all_steps[step_idx + 1:]
-            for next_step in fwd_steps:
-                step_len = next_step - start_step
-                if step_len in self.valid_moves:
-                    step_dict.setdefault(start_step, []).append(next_step)
-
-        return self.dfs(start, end, step_dict, {})
 
     def __build_staircase(self, structure, stair_info):
         """ `S{X} : {N1} -> {N2} : FROM S{A} TO S{B}` """
@@ -66,52 +45,102 @@ class Staircase:
         sx_start, sx_end = f"{S_X}_{N1}",  f"{S_X}_{N2}"
         branch_point, return_point = f"{S_A}_{N1}",  f"{S_B}_{N2}"
         if S_A != "START" or S_B != "END":
-            structure.setdefault(branch_point, []).append(sx_start)
-            structure.setdefault(sx_end, []).append(return_point)
+            structure.setdefault(branch_point, set()).add((sx_start, 1))
+            structure.setdefault(sx_end, set()).add((return_point, 1))
 
         avail_steps = list(range(N1, N2 + 1))
         for step_idx, start_step in enumerate(avail_steps):
             fwd_steps = avail_steps[step_idx + 1:]
-            for next_step in fwd_steps:
-                structure.setdefault(f"{S_X}_{start_step}", []).append(f"{S_X}_{next_step}")
+            for next_idx, next_step in enumerate(fwd_steps, start=1):
+                if next_idx in self.valid_moves:
+                    structure.setdefault(f"{S_X}_{start_step}", set()).add((f"{S_X}_{next_step}", next_idx))
 
         return structure
 
-    def multiple_stair_paths(self):
-        stair_structure = {}
-        for branch in self.staircase_data.values():
-            stair_structure = self.__build_staircase(stair_structure, branch)
+    def __identify_shortcuts(self, structure):
 
-        # for step_part in stair_structure.items():
-        #     print(step_part)
+        def step_tracker(base_step, standing_step):
+            for connected_step in structure.get(standing_step[0], []):
+                next_move = (connected_step[0], standing_step[1] + connected_step[1])
+                if next_move[1] > max(valid_moves):
+                    continue
+                step_tracker(base_step, next_move)  # Recurse properly
+                if any(next_move[0] == move for move, _ in complete_moves[base_step]):
+                    continue
+                if next_move[1] in valid_moves:
+                    complete_moves.setdefault(base_step, set()).add(next_move)
 
-        count = self.dfs("S1_0", "S1_6", stair_structure, {})
+        complete_moves =  copy.deepcopy(structure)
+        valid_moves = self.valid_moves
+
+        for base_step in structure:
+            for next_step in list(complete_moves[base_step]):
+                step_tracker(base_step, next_step)
+
+        return complete_moves
+
+    def __dfs_algorithm(self, current, end_step, structure, history = {}, multi_level = True):
+        if current == end_step: # If current is final step, count 1
+            return 1
+        if current in history: # If current is in history return to that point
+            return history[current]
+        total = 0
+        for (next_step, mag) in structure.get(current, []):
+            if multi_level:
+                total += self.__dfs_algorithm(next_step, end_step, structure, history, multi_level)
+            else:
+                current_branch = int(current.split('_')[0][1:])
+                next_branch = int(next_step.split('_')[0][1:])
+                if current_branch != next_branch:
+                    continue
+                total += self.__dfs_algorithm(next_step, end_step, structure, history, multi_level)
+
+        history[current] = total
+        return total
+
+    def __build_paths(self, current, end_step, structure, valid_paths = [], multi_level = True):
+        """
+        Prints each possible path created, but takes too long for large stair structures
+        """
+        for next_step, mag in structure.get(current[-1], []):
+            new_path = current + [next_step]
+            if next_step == end_step:
+                joined_path = '-'.join(new_path)
+                valid_paths.append(joined_path)
+                print(f"{len(valid_paths)}: {joined_path}")
+            else:
+                if multi_level:
+                    valid_paths = self.__build_paths(new_path, end_step, structure, valid_paths)
+                else:
+                    current_branch = int(current.split('_')[0][1:])
+                    next_branch = int(next_step.split('_')[0][1:])
+                    if current_branch == next_branch:
+                        valid_paths = self.__build_paths(new_path, end_step, structure, valid_paths)
+
+        return valid_paths
+
+    def count_stair_paths(self, target_step, structure_type = "multiple"):
+
+        start_point = f"{target_step}_{self.staircase_data[target_step][1]}"
+        end_point = f"{target_step}_{self.staircase_data[target_step][2]}"
+
+        if structure_type == "single":
+            multi_level = False
+            stair_structure = self.basic_structure.copy()
+        elif structure_type == "multiple":
+            multi_level = True
+            stair_structure = self.validated_structure.copy()
+
+        count = self.__dfs_algorithm(start_point, end_point, stair_structure, {}, multi_level)
         return count
 
 stairs = Staircase(steps, possible_moves)
 
-single_stair = stairs.single_stair_paths("S1")
+single_stair = stairs.count_stair_paths("S1", "single")
 print("Part 1:", single_stair)
 
-multiple_stairs = stairs.multiple_stair_paths()
+multiple_stairs = stairs.count_stair_paths("S1", "multiple")
 print("Part 2:", multiple_stairs)
 
-print(f"Execution Time = {time.time() - start_time:.5f}s")
+# print(f"Execution Time = {time.time() - start_time:.5f}s")
 
-# S1_0-S1_1-S1_2-S1_3-S1_4-S1_5-S1_6
-# S1_0-S1_1-S1_2-S1_3-S1_6
-# S1_0-S1_1-S1_2-S1_5-S1_6
-# S1_0-S1_1-S1_2-S2_2-S1_4-S1_5-S1_6
-# S1_0-S1_1-S1_2-S2_2-S2_3-S1_3-S1_4-S1_5-S1_6
-# S1_0-S1_1-S1_2-S2_2-S2_3-S1_3-S1_6
-# S1_0-S1_1-S1_2-S2_2-S2_3-S1_5-S1_6
-# S1_0-S1_1-S1_4-S1_5-S1_6
-# S1_0-S1_1-S2_3-S1_3-S1_4-S1_5-S1_6
-# S1_0-S1_1-S2_3-S1_3-S1_6
-# S1_0-S1_1-S2_3-S1_5-S1_6
-# S1_0-S1_3-S1_4-S1_5-S1_6
-# S1_0-S1_3-S1_6
-# S1_0-S2_2-S1_4-S1_5-S1_6
-# S1_0-S2_2-S2_3-S1_3-S1_4-S1_5-S1_6
-# S1_0-S2_2-S2_3-S1_3-S1_6
-# S1_0-S2_2-S2_3-S1_5-S1_6
