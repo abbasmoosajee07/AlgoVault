@@ -7,7 +7,7 @@ Brief: [Spiralling Stairs]
 
 #!/usr/bin/env python3
 
-import os, re, copy, time
+import os, re, copy, time, functools
 start_time = time.time()
 
 # Load the input data from the specified file path
@@ -30,13 +30,18 @@ class Staircase:
             basic_structure = self.__build_staircase(basic_structure, branch)
 
         self.basic_structure = copy.deepcopy(basic_structure)
-        self.validated_structure = self.__identify_shortcuts(basic_structure.copy())
+        self.expanded_structure = self.__identify_shortcuts(basic_structure.copy())
 
     def __parse_step(self, raw_info):
         info_list = raw_info.split()
         useful = (info_list[0], int(info_list[2]), int(info_list[4]),
                     info_list[7], info_list[9])
         return useful
+
+    def identify_start_end(self, target_step):
+        start_point = f"{target_step}_{self.staircase_data[target_step][1]}"
+        end_point = f"{target_step}_{self.staircase_data[target_step][2]}"
+        return start_point, end_point
 
     def __build_staircase(self, structure, stair_info):
         """ `S{X} : {N1} -> {N2} : FROM S{A} TO S{B}` """
@@ -96,9 +101,13 @@ class Staircase:
                 total += self.__dfs_algorithm(next_step, end_step, structure, history, multi_level)
 
         history[current] = total
+        if multi_level:
+            self.history_multi = history.copy()
+        else:
+            self.history_basic = history.copy()
         return total
 
-    def __build_paths(self, current, end_step, structure, valid_paths = [], multi_level = True):
+    def __visualize_all_paths(self, current, end_step, structure, valid_paths = [], multi_level = True, visualize = True):
         """
         Prints each possible path created, but takes too long for large stair structures
         """
@@ -107,32 +116,67 @@ class Staircase:
             if next_step == end_step:
                 joined_path = '-'.join(new_path)
                 valid_paths.append(joined_path)
-                print(f"{len(valid_paths)}: {joined_path}")
+                if visualize:
+                    print(f"{len(valid_paths)}: {joined_path}")
             else:
                 if multi_level:
-                    valid_paths = self.__build_paths(new_path, end_step, structure, valid_paths)
+                    valid_paths = self.__visualize_all_paths(new_path, end_step, structure, valid_paths, multi_level, visualize)
                 else:
                     current_branch = int(current.split('_')[0][1:])
                     next_branch = int(next_step.split('_')[0][1:])
                     if current_branch == next_branch:
-                        valid_paths = self.__build_paths(new_path, end_step, structure, valid_paths)
+                        valid_paths = self.__visualize_all_paths(new_path, end_step, structure, valid_paths, multi_level, visualize)
 
         return valid_paths
 
     def count_stair_paths(self, target_step, structure_type = "multiple"):
 
-        start_point = f"{target_step}_{self.staircase_data[target_step][1]}"
-        end_point = f"{target_step}_{self.staircase_data[target_step][2]}"
+        start_point, end_point = self.identify_start_end(target_step)
 
         if structure_type == "single":
             multi_level = False
             stair_structure = self.basic_structure.copy()
         elif structure_type == "multiple":
             multi_level = True
-            stair_structure = self.validated_structure.copy()
+            stair_structure = self.expanded_structure.copy()
 
         count = self.__dfs_algorithm(start_point, end_point, stair_structure, {}, multi_level)
         return count
+    def extract_numbers(self, s):
+        # Use regex to extract the numbers after 'S' and after '_'
+        match = re.match(r'S(\d+)_(\d+)', s)
+        return (int(match.group(1)), int(match.group(2)))
+
+    def __build_desired_path(self, start, end, target):
+        # print(f"{start} -> {end}: Rank {desired_rank}")
+        stair_structure = self.expanded_structure.copy()
+        # reachable_states = {}
+        # for step, connections in stair_structure.items():
+        #     corrected_states = set(step for step, _ in connections)
+        #     reachable_states[step] = corrected_states
+        dp = self.history_multi.copy()
+        dp[end] = 1
+
+        path = [start]
+        while path[-1] != end:
+            state = path[-1]
+            reachable_states = sorted(step for step, _ in stair_structure[state])
+            reachable_states_sorted = sorted(reachable_states,  key=self.extract_numbers)
+            print(state, reachable_states_sorted)
+            path += [reachable_states_sorted]
+            for state_next in reachable_states_sorted:
+                path[-1] = state_next
+                if target - dp[state_next] <= 0:
+                    break
+                target -= dp[state_next]
+        return path
+
+    def find_safest_path(self, target_step, total_paths, target_rank = 1E+29):
+        path_rank = min(target_rank, total_paths)
+        start_point, end_point = self.identify_start_end(target_step)
+        path_built = self.__build_desired_path(start_point, end_point, path_rank)
+
+        return '-'.join(path_built)
 
 stairs = Staircase(steps, possible_moves)
 
@@ -142,5 +186,94 @@ print("Part 1:", single_stair)
 multiple_stairs = stairs.count_stair_paths("S1", "multiple")
 print("Part 2:", multiple_stairs)
 
-# print(f"Execution Time = {time.time() - start_time:.5f}s")
+ranked_path = stairs.find_safest_path("S1", multiple_stairs)
+print("Part 3:", ranked_path)
+
+from collections import defaultdict
+
+blocks = [block.splitlines() for block in open(D17_file_path, "r").read().split("\n\n")]
+
+# read staircases, build set of states and map of directed, single steps
+states = set()
+steps = defaultdict(list)
+start, end = (-1, -1), (-1, -1)
+for line in blocks[0]:
+    s = line.split()
+    id, level_start, level_end, sid_from, sid_to = int(s[0][1:]), int(s[2]), int(s[4]), s[7], s[9]
+    for level in range(level_start, level_end + 1):
+        states.add((id, level))
+        if level < level_end:
+            steps[(id, level)] += [(id, level + 1)]
+    if id == 1:
+        start, end = (id, level_start), (id, level_end)
+    else:
+        id_from, id_to = int(sid_from[1:]), int(sid_to[1:])
+        steps[(id_from, level_start)] += [(id, level_start)]
+        steps[(id, level_end)] += [(id_to, level_end)]
+
+# read moves
+moves = set(map(int, re.findall(r"[-+]?\d+", blocks[1][0])))
+max_move = max(moves)
+
+# build map of all states that are reachable from a state in a full move
+reachable_states = defaultdict(set)
+for state in states:
+    states_tmp = {state}
+    for k in range(1, max_move + 1):
+        states_tmp_new = set()
+        for s in states_tmp:
+            states_tmp_new.update(steps[s])
+        states_tmp = states_tmp_new
+        if k in moves:
+            reachable_states[state].update(states_tmp)
+
+# topological sort of states
+n_states = len(states)
+in_degree = defaultdict(int)
+for lst in steps.values():
+    for v in lst:
+        in_degree[v] += 1
+sorted_states = []
+stack = [s for s in states if in_degree[s] == 0]
+while stack:
+    v = stack.pop()
+    sorted_states += [v]
+    for u in steps[v]:
+        in_degree[u] -= 1
+        if in_degree[u] == 0:
+            stack += [u]
+assert len(sorted_states) == n_states
+
+dp = defaultdict(int)
+dp[start] = 1
+for i in range(0, end[1] + 1):
+    state = (1, i)
+    for reachable_state in reachable_states[state]:
+        if reachable_state[0] == 1:
+            dp[reachable_state] += dp[state]
+ans1 = dp[end]
+
+dp = defaultdict(int)
+dp[end] = 1
+for state in reversed(sorted_states):
+    for reachable_state in reachable_states[state]:
+        dp[state] += dp[reachable_state]
+ans2 = dp[start]
+
+
+target = 100000000000000000000000000000
+path = [start]
+while path[-1] != end:
+    state = path[-1]
+    reachable_states_sorted = sorted(reachable_states[state])
+    print(state, reachable_states_sorted)
+    path += [reachable_states_sorted[0]]
+    for state_next in reachable_states_sorted:
+        path[-1] = state_next
+        if target - dp[state_next] <= 0:
+            break
+        target -= dp[state_next]
+ans3 = "-".join(f"S{state[0]}_{state[1]}" for state in path)
+print(f"part 3: {ans3}")
+print(f"Execution Time = {time.time() - start_time:.5f}s")
 
