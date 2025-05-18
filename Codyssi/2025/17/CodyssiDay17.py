@@ -187,5 +187,5 @@ print("Part 2:", multiple_stairs)
 ranked_path = stairs.find_safest_path("S1", multiple_stairs)
 print("Part 3:", ranked_path)
 
-print(f"Execution Time = {time.time() - start_time:.5f}s")
+# print(f"Execution Time = {time.time() - start_time:.5f}s")
 
