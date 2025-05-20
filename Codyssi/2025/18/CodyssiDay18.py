@@ -14,6 +14,8 @@ import pandas as pd
 import matplotlib.pyplot as plt
 start_time = time.time()
 
+from collections import deque
+from itertools import product
 # Load the input data from the specified file path
 D18_file = "Day18_input3.txt"
 D18_file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), D18_file)
@@ -89,7 +91,7 @@ class Submarine:
         self.debris_map = debris_map
         return len(debris_map)
 
-    def __wrapped_move(self, pos, delta, dim, wrapping=True):
+    def __wrapped_move(self, pos, delta, dim, wrapping):
         min_val = min(self.space_region[dim])
         max_val = max(self.space_region[dim])
         range_size = len(self.space_region[dim])
@@ -102,7 +104,7 @@ class Submarine:
         else:
             return pos  # No movement if out-of-bounds
 
-    def __move_in_dimension(self, coords, move, time: int = 1, wrapping: bool = True):
+    def __move_in_dimension(self, coords, move, time = 1, wrapping = False):
         dim, velocity = move
         dim_idx = self.idx_map[dim]
 
@@ -111,30 +113,56 @@ class Submarine:
         new_coords[dim_idx] = self.__wrapped_move(coords[dim_idx], delta, dim, wrapping)
         return tuple(new_coords)
 
-    def __move_particle(self, rule, particle, time, wrapping: bool = True):
+    def __move_particle(self, rule, particle, time = 1, wrapping = True):
         new_coords = []
-
         for dim, idx in self.idx_map.items():
             velocity = self.rule_dict[rule]["v" + dim]
-            velocity = (1, -1, 0, 1)[idx]
+            # velocity = (1, -1, 0, 1)[idx]
             delta = velocity * time
             moved_pos = self.__wrapped_move(particle[idx], delta, dim, wrapping)
             new_coords.append(moved_pos)
 
         return tuple(new_coords)
 
+    def find_flight_path(self, target, start=(0, 0, 0, 0)):
+        ALL_MOVES = list(product(("x", "y", "z"), (1, -1, 0)))
+        debris_map = self.debris_map.copy()
+        visited = set()
+        queue = deque([(start, 0)])
+        position_history = {0: debris_map}
+        min_time = float("inf")
 
-    def find_flight_path(self, target, start = (0, 0, 0, 0)):
+        while queue:
+            current_pos, time_step = queue.popleft()
+            print(current_pos, time_step)
 
-        init_particle = (3, 9, 1, -1)
-        moved_particle = self.__move_particle(1, init_particle, 7)
-        print(f"{init_particle} -> {moved_particle})")
+            if current_pos == target:
+                min_time = min(min_time, time_step)
+                # break
+            if (time_step > min_time) or ((current_pos, time_step) in visited):
+                continue
+            visited.add((current_pos, time_step))
 
-        all_moves = list(product( ("x", "y", "z"), (1, -1, 0)))
-        init_particle = (9, 3, 8, 0)
-        possible_moves = set(self.__move_in_dimension(init_particle, move, wrapping=False) for move in all_moves)
-        print(possible_moves)
-        return
+            # Compute occupied space by debris at next time step
+            next_time = time_step + 1
+            if next_time in position_history.keys():
+                occupied_space = position_history[next_time].copy()
+            else:
+                occupied_space = {
+                    self.__move_particle(rule, init_pos, next_time)
+                    for rule, init_pos in debris_map
+                }
+                position_history[next_time] = occupied_space
+
+            # Try all possible single-dimension moves
+            for move in ALL_MOVES:
+                next_pos = self.__move_in_dimension(current_pos, move, time=1)
+
+                if next_pos not in occupied_space:
+                    queue.append((next_pos, next_time))
+
+        # If target is never reached
+        return min_time
 
 sub = Submarine(input_data, feasible)
 
