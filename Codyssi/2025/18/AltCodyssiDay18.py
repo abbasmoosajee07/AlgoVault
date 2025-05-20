@@ -7,17 +7,12 @@ Brief: [Cataclysmic Escape]
 
 #!/usr/bin/env python3
 
-import os, re, copy, time
+import os, re, copy, time, heapq
 from itertools import product
-import numpy as np
-import pandas as pd
-import matplotlib.pyplot as plt
 start_time = time.time()
 
-from collections import deque
-from itertools import product
 # Load the input data from the specified file path
-D18_file = "Day18_input3.txt"
+D18_file = "Day18_input.txt"
 D18_file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), D18_file)
 
 # Read and sort input data into a grid
@@ -26,16 +21,15 @@ with open(D18_file_path) as file:
     feasible_spaces = {
         "Day18_input1.txt":((10, 15, 60, 3), (9, 14, 59, 0)), "Day18_input2.txt":((3,3,5,3),(2, 2, 4, 0)),
         "Day18_input.txt": ((10, 15, 60, 3),(9, 14, 59, 0)), "Day18_input3.txt":((10, 15, 60, 3), (9, 14, 59, 0))}
-    feasible, target = feasible_spaces[D18_file]
+    feasible, target_coords = feasible_spaces[D18_file]
 
 class Submarine:
     def __init__(self, all_rules, feasible_space):
+        MIN_LIMITS = (0, 0, 0, -1)
         self.idx_map = {"x": 0, "y": 1, "z": 2, "a": 3}
-        self.feasible_space = feasible_space
         self.rule_dict = {}
         for rule in all_rules:
             self.parse_rules(rule)
-        MIN_LIMITS = (0, 0, 0, -1)
         self.space_region = {
             "x" : range(MIN_LIMITS[0], feasible_space[0]),
             "y" : range(MIN_LIMITS[1], feasible_space[1]),
@@ -104,72 +98,71 @@ class Submarine:
         else:
             return pos  # No movement if out-of-bounds
 
+    def __move_particle(self, rule, particle, time = 1, wrapping = True):
+        new_coords = []
+        for dim, idx in self.idx_map.items():
+            velocity = self.rule_dict[rule]["v" + dim]
+            delta = velocity * time
+            moved_pos = self.__wrapped_move(particle[idx], delta, dim, wrapping)
+            new_coords.append(moved_pos)
+        return tuple(new_coords)
+
     def __move_in_dimension(self, coords, move, time = 1, wrapping = False):
         dim, velocity = move
         dim_idx = self.idx_map[dim]
-
         delta = velocity * time
         new_coords = list(coords).copy()
         new_coords[dim_idx] = self.__wrapped_move(coords[dim_idx], delta, dim, wrapping)
         return tuple(new_coords)
 
-    def __move_particle(self, rule, particle, time = 1, wrapping = True):
-        new_coords = []
-        for dim, idx in self.idx_map.items():
-            velocity = self.rule_dict[rule]["v" + dim]
-            # velocity = (1, -1, 0, 1)[idx]
-            delta = velocity * time
-            moved_pos = self.__wrapped_move(particle[idx], delta, dim, wrapping)
-            new_coords.append(moved_pos)
-
-        return tuple(new_coords)
-
     def find_flight_path(self, target, start=(0, 0, 0, 0)):
         ALL_MOVES = list(product(("x", "y", "z"), (1, -1, 0)))
-        debris_map = self.debris_map.copy()
-        visited = set()
-        queue = deque([(start, 0)])
-        position_history = {0: debris_map}
-        min_time = float("inf")
+        MAX_TIME = 200  # upper limit to search; tweak as needed
+        og_debris_map = self.debris_map.copy()
 
-        while queue:
-            current_pos, time_step = queue.popleft()
-            print(current_pos, time_step)
+        # Precompute debris positions per timestep
+        debris_by_time = {0: og_debris_map}
+        for t in range(1, MAX_TIME + 1):
+            for rule, pos in og_debris_map:
+                debris_pos = self.__move_particle(rule, pos, t)
+                debris_by_time.setdefault(t, set()).add(debris_pos)
 
-            if current_pos == target:
-                min_time = min(min_time, time_step)
-                # break
-            if (time_step > min_time) or ((current_pos, time_step) in visited):
+        # Dijkstra/BFS with time dimension
+        heap = [(0, start)]  # (time, position)
+        visited = set()  # track (position, time)
+
+        while heap:
+            time, pos = heapq.heappop(heap)
+
+            if pos == target:
+                return time
+
+            if (pos, time) in visited:
                 continue
-            visited.add((current_pos, time_step))
+            visited.add((pos, time))
 
-            # Compute occupied space by debris at next time step
-            next_time = time_step + 1
-            if next_time in position_history.keys():
-                occupied_space = position_history[next_time].copy()
+            next_time = time + 1
+            if next_time in debris_by_time:
+                occupied = debris_by_time[next_time]
             else:
-                occupied_space = {
-                    self.__move_particle(rule, init_pos, next_time)
-                    for rule, init_pos in debris_map
+                debris_by_time[next_time] = {
+                    self.__move_particle(rule, pos, next_time)
+                        for rule, pos in og_debris_map
                 }
-                position_history[next_time] = occupied_space
 
-            # Try all possible single-dimension moves
             for move in ALL_MOVES:
-                next_pos = self.__move_in_dimension(current_pos, move, time=1)
+                next_pos = self.__move_in_dimension(pos, move, 1)
+                if next_pos not in occupied or next_pos == start:
+                    heapq.heappush(heap, (next_time, next_pos))
 
-                if next_pos not in occupied_space:
-                    queue.append((next_pos, next_time))
-
-        # If target is never reached
-        return min_time
+        return -1  # if unreachable
 
 sub = Submarine(input_data, feasible)
 
 debris = sub.count_debris()
 print("Part 1:", debris)
 
-flight_time = sub.find_flight_path(target)
+flight_time = sub.find_flight_path(target_coords)
 print("Part 2:", flight_time)
 
 print(f"Execution Time = {time.time() - start_time:.5f}s")
