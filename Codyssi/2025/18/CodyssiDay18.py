@@ -15,18 +15,20 @@ import matplotlib.pyplot as plt
 start_time = time.time()
 
 # Load the input data from the specified file path
-D18_file = "Day18_input.txt"
+D18_file = "Day18_input3.txt"
 D18_file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), D18_file)
 
 # Read and sort input data into a grid
 with open(D18_file_path) as file:
     input_data = file.read().strip().split('\n')
-    feasible_spaces = {"Day18_input1.txt":(10, 15, 60, 3), "Day18_input2.txt":(3,3,5,3),
-        "Day18_input.txt":(10, 15, 60, 3), "Day18_input3.txt":(10, 15, 60, 3)}
-    feasible = feasible_spaces[D18_file]
+    feasible_spaces = {
+        "Day18_input1.txt":((10, 15, 60, 3), (9, 14, 59, 0)), "Day18_input2.txt":((3,3,5,3),(2, 2, 4, 0)),
+        "Day18_input.txt": ((10, 15, 60, 3),(9, 14, 59, 0)), "Day18_input3.txt":((10, 15, 60, 3), (9, 14, 59, 0))}
+    feasible, target = feasible_spaces[D18_file]
 
 class Submarine:
     def __init__(self, all_rules, feasible_space):
+        self.idx_map = {"x": 0, "y": 1, "z": 2, "a": 3}
         self.feasible_space = feasible_space
         self.rule_dict = {}
         for rule in all_rules:
@@ -78,20 +80,68 @@ class Submarine:
             return False
 
     def count_debris(self):
-        debris_dict = {}
-        count = 0
+        debris_map = []
         for coords in self.all_coords:
-            for rule in self.rule_dict:
-                check = self.__check_debris(coords, rule)
+            for rule_no in self.rule_dict:
+                check = self.__check_debris(coords, rule_no)
                 if check:
-                    count += 1
-                    debris_dict.setdefault(rule, set()).add(coords)
-        # total_debris = {rule: len(debris) for rule, debris in debris_dict.items()}
-        return count
+                    debris_map.append((rule_no, coords))
+        self.debris_map = debris_map
+        return len(debris_map)
+
+    def __wrapped_move(self, pos, delta, dim, wrapping=True):
+        min_val = min(self.space_region[dim])
+        max_val = max(self.space_region[dim])
+        range_size = len(self.space_region[dim])
+        new_pos = pos + delta
+
+        if wrapping:
+            return (new_pos - min_val) % range_size + min_val
+        elif min_val <= new_pos <= max_val:
+            return new_pos
+        else:
+            return pos  # No movement if out-of-bounds
+
+    def __move_in_dimension(self, coords, move, time: int = 1, wrapping: bool = True):
+        dim, velocity = move
+        dim_idx = self.idx_map[dim]
+
+        delta = velocity * time
+        new_coords = list(coords).copy()
+        new_coords[dim_idx] = self.__wrapped_move(coords[dim_idx], delta, dim, wrapping)
+        return tuple(new_coords)
+
+    def __move_particle(self, rule, particle, time, wrapping: bool = True):
+        new_coords = []
+
+        for dim, idx in self.idx_map.items():
+            velocity = self.rule_dict[rule]["v" + dim]
+            velocity = (1, -1, 0, 1)[idx]
+            delta = velocity * time
+            moved_pos = self.__wrapped_move(particle[idx], delta, dim, wrapping)
+            new_coords.append(moved_pos)
+
+        return tuple(new_coords)
+
+
+    def find_flight_path(self, target, start = (0, 0, 0, 0)):
+
+        init_particle = (3, 9, 1, -1)
+        moved_particle = self.__move_particle(1, init_particle, 7)
+        print(f"{init_particle} -> {moved_particle})")
+
+        all_moves = list(product( ("x", "y", "z"), (1, -1, 0)))
+        init_particle = (9, 3, 8, 0)
+        possible_moves = set(self.__move_in_dimension(init_particle, move, wrapping=False) for move in all_moves)
+        print(possible_moves)
+        return
 
 sub = Submarine(input_data, feasible)
 
 debris = sub.count_debris()
 print("Part 1:", debris)
+
+flight_time = sub.find_flight_path(target)
+print("Part 2:", flight_time)
 
 print(f"Execution Time = {time.time() - start_time:.5f}s")
