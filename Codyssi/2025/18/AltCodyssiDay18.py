@@ -26,6 +26,7 @@ with open(D18_file_path) as file:
 class Submarine:
     def __init__(self, all_rules, feasible_space):
         MIN_LIMITS = (0, 0, 0, -1)
+        self.ALL_MOVES = list(product(("x", "y", "z"), (1, -1, 0)))
         self.idx_map = {"x": 0, "y": 1, "z": 2, "a": 3}
         self.rule_dict = {}
         for rule in all_rules:
@@ -35,9 +36,12 @@ class Submarine:
             "y" : range(MIN_LIMITS[1], feasible_space[1]),
             "z" : range(MIN_LIMITS[2], feasible_space[2]),
             "a" : range(MIN_LIMITS[3], feasible_space[3] -1)
-        }
-        self.all_coords = list(product(self.space_region['x'], self.space_region['y'], \
-                                self.space_region['z'], self.space_region['a']))
+            }
+        self.all_coords = list(product(
+            self.space_region['x'], self.space_region['y'],
+            self.space_region['z'], self.space_region['a'])
+            )
+        self.debris_by_time = None
 
     def parse_rules(self, rule):
 
@@ -98,14 +102,19 @@ class Submarine:
         else:
             return pos  # No movement if out-of-bounds
 
-    def __move_particle(self, rule, particle, time = 1, wrapping = True):
-        new_coords = []
-        for dim, idx in self.idx_map.items():
-            velocity = self.rule_dict[rule]["v" + dim]
-            delta = velocity * time
-            moved_pos = self.__wrapped_move(particle[idx], delta, dim, wrapping)
-            new_coords.append(moved_pos)
-        return tuple(new_coords)
+    def __track_debris(self, debris_map, time = 1, wrapping = True):
+        debris_at_time = {}
+        for rule, pos in debris_map:
+            new_coords = []
+            for dim, idx in self.idx_map.items():
+                velocity = self.rule_dict[rule]["v" + dim]
+                delta = velocity * time
+                moved_pos = self.__wrapped_move(pos[idx], delta, dim, wrapping)
+                new_coords.append(moved_pos)
+            new_coords = tuple(new_coords)
+            debris_at_time.setdefault(new_coords, []).append(rule)
+            self.debris_by_time[time] = debris_at_time
+        return self.debris_by_time[time]
 
     def __move_in_dimension(self, coords, move, time = 1, wrapping = False):
         dim, velocity = move
@@ -115,45 +124,44 @@ class Submarine:
         new_coords[dim_idx] = self.__wrapped_move(coords[dim_idx], delta, dim, wrapping)
         return tuple(new_coords)
 
-    def find_flight_path(self, target, start=(0, 0, 0, 0)):
-        ALL_MOVES = list(product(("x", "y", "z"), (1, -1, 0)))
-        MAX_TIME = 200  # upper limit to search; tweak as needed
-        og_debris_map = self.debris_map.copy()
-
-        # Precompute debris positions per timestep
-        debris_by_time = {0: og_debris_map}
-        for t in range(1, MAX_TIME + 1):
-            for rule, pos in og_debris_map:
-                debris_pos = self.__move_particle(rule, pos, t)
-                debris_by_time.setdefault(t, set()).add(debris_pos)
+    def find_flight_path(self, target, base_health = None, start=(0, 0, 0, 0), MAX_TIME= 200):
+        if self.debris_by_time is None:
+            self.debris_by_time = {0: self.debris_map}
+            for t in range(1, MAX_TIME + 1):
+                self.__track_debris(self.debris_map, t)
 
         # Dijkstra/BFS with time dimension
-        heap = [(0, start)]  # (time, position)
-        visited = set()  # track (position, time)
+        heap = [(0, base_health, start)]  # (time, position)
+        visited = set()      # track (position, time)
 
         while heap:
-            time, pos = heapq.heappop(heap)
+            time, health, pos = heapq.heappop(heap)
 
             if pos == target:
                 return time
 
-            if (pos, time) in visited:
+            if (pos, health, time) in visited:
                 continue
-            visited.add((pos, time))
+            if base_health is not None and health < 0:
+                continue
+            visited.add((pos, health, time))
 
             next_time = time + 1
-            if next_time in debris_by_time:
-                occupied = debris_by_time[next_time]
+            if next_time in self.debris_by_time:
+                occupied = self.debris_by_time[next_time]
             else:
-                debris_by_time[next_time] = {
-                    self.__move_particle(rule, pos, next_time)
-                        for rule, pos in og_debris_map
-                }
+                occupied = self.__track_debris(self.debris_map, next_time)
 
-            for move in ALL_MOVES:
+            for move in self.ALL_MOVES:
                 next_pos = self.__move_in_dimension(pos, move, 1)
-                if next_pos not in occupied or next_pos == start:
-                    heapq.heappush(heap, (next_time, next_pos))
+                if base_health is None:
+                    if next_pos not in occupied.keys() or next_pos == start:
+                        heapq.heappush(heap, (next_time, health, next_pos))
+                else:
+                    colliding_debris = len(occupied.get(next_pos, []))
+                    if next_pos == start:
+                        colliding_debris = 0
+                    heapq.heappush(heap, (next_time, health - colliding_debris, next_pos))
 
         return -1  # if unreachable
 
@@ -162,7 +170,10 @@ sub = Submarine(input_data, feasible)
 debris = sub.count_debris()
 print("Part 1:", debris)
 
-flight_time = sub.find_flight_path(target_coords)
-print("Part 2:", flight_time)
+safest_path = sub.find_flight_path(target_coords)
+print("Part 2:", safest_path)
+
+acceptable_path = sub.find_flight_path(target_coords, 3)
+print("Part 3:", acceptable_path)
 
 print(f"Execution Time = {time.time() - start_time:.5f}s")
