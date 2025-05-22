@@ -11,7 +11,7 @@ from Benchmarks.execute_challenge import execute_challenge_scripts
 if __name__ == "__main__":
     # Define constants
     YEAR = "Codyssi"
-    CHALLENGE_NAME = 'Quests'
+    CHALLENGE_NAME = 'Journey to Atlantis'
     DAYS_TO_RUN = range(1, 26)
     COLOR_CHALLENGE = "#00A86B"
     NUM_ITERATIONS = 3  # Number of iterations for benchmarking

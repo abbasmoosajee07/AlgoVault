@@ -12,16 +12,12 @@ from itertools import product
 start_time = time.time()
 
 # Load the input data from the specified file path
-D18_file = "Day18_input.txt"
+D18_file = "Day18_input3.txt"
 D18_file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), D18_file)
 
 # Read and sort input data into a grid
 with open(D18_file_path) as file:
     input_data = file.read().strip().split('\n')
-    feasible_spaces = {
-        "Day18_input1.txt":((10, 15, 60, 3), (9, 14, 59, 0)), "Day18_input2.txt":((3,3,5,3),(2, 2, 4, 0)),
-        "Day18_input.txt": ((10, 15, 60, 3),(9, 14, 59, 0)), "Day18_input3.txt":((10, 15, 60, 3), (9, 14, 59, 0))}
-    feasible, target_coords = feasible_spaces[D18_file]
 
 class Submarine:
     def __init__(self, all_rules, feasible_space):
@@ -124,7 +120,7 @@ class Submarine:
         new_coords[dim_idx] = self.__wrapped_move(coords[dim_idx], delta, dim, wrapping)
         return tuple(new_coords)
 
-    def find_flight_path(self, target, base_health = None, start=(0, 0, 0, 0), MAX_TIME= 200):
+    def find_flight_path(self, target, base_health = None, start=(0, 0, 0, 0), MAX_TIME= 20):
         if self.debris_by_time is None:
             self.debris_by_time = {0: self.debris_map}
             for t in range(1, MAX_TIME + 1):
@@ -133,16 +129,21 @@ class Submarine:
         # Dijkstra/BFS with time dimension
         heap = [(0, base_health, start)]  # (time, position)
         visited = set()      # track (position, time)
-
+        count = 0
+        min_time = 99999999999999
         while heap:
             time, health, pos = heapq.heappop(heap)
-
-            if pos == target:
-                return time
+            print(time, health, pos)
+            count += 1
+            # if pos == target:
+            #     # print(count)
+            #     min_time = min(min_time, time)
+            #     # continue
+            #     return time
 
             if (pos, health, time) in visited:
                 continue
-            if base_health is not None and health < 0:
+            if base_health is not None and health <= 0:
                 continue
             visited.add((pos, health, time))
 
@@ -154,16 +155,120 @@ class Submarine:
 
             for move in self.ALL_MOVES:
                 next_pos = self.__move_in_dimension(pos, move, 1)
-                if base_health is None:
-                    if next_pos not in occupied.keys() or next_pos == start:
-                        heapq.heappush(heap, (next_time, health, next_pos))
+                if next_pos == target:
+                    # print(count)
+                    min_time = min(min_time, next_time)
+                    # return time
                 else:
-                    colliding_debris = len(occupied.get(next_pos, []))
-                    if next_pos == start:
-                        colliding_debris = 0
-                    heapq.heappush(heap, (next_time, health - colliding_debris, next_pos))
+                    if base_health is None:
+                        if next_pos not in occupied.keys() or next_pos == start:
+                            heapq.heappush(heap, (next_time, health, next_pos))
+                    else:
+                        colliding_debris = len(occupied.get(next_pos, []))
+                        if next_pos == start:
+                            colliding_debris = 0
+                        heapq.heappush(heap, (next_time, health - colliding_debris, next_pos))
+        print(count)
+        return min_time  # if unreachable
 
-        return -1  # if unreachable
+    def find_flight_path(self, target, base_health=None, start=(0, 0, 0, 0), MAX_TIME=20):
+        if self.debris_by_time is None:
+            self.debris_by_time = {0: self.debris_map}
+            for t in range(1, MAX_TIME + 1):
+                self.__track_debris(self.debris_map, t)
+
+        # Priority queue: (time, health, position)
+        heap = [(0, base_health if base_health is not None else 0, start)]
+        visited = set()
+        min_time = float('inf')
+
+        while heap:
+            time, health, pos = heapq.heappop(heap)
+            if (pos, health, time) in visited:
+                continue
+            visited.add((pos, health, time))
+
+            if pos == target:
+                min_time = min(min_time, time)
+                continue  # Keep going to find a possibly smaller time
+
+                return time  # Found the target
+
+            if base_health is not None and health <= 0:
+                continue
+
+            next_time = time + 1
+
+            # Generate debris map if needed
+            if next_time not in self.debris_by_time:
+                self.__track_debris(self.debris_map, next_time)
+            occupied = self.debris_by_time[next_time]
+
+            for move in self.ALL_MOVES:
+                next_pos = self.__move_in_dimension(pos, move, 1)
+                if base_health is None:
+                    if next_pos not in occupied or next_pos == start:
+                        heapq.heappush(heap, (next_time, 0, next_pos))
+                else:
+                    colliding = len(occupied.get(next_pos, []))
+                    if next_pos == start:
+                        colliding = 0
+                    new_health = health - colliding
+                    if new_health >= 0:
+                        heapq.heappush(heap, (next_time, new_health, next_pos))
+
+        return min_time if min_time != float('inf') else -1
+
+    def find_flight_path1(self, target, base_health=None, start=(0, 0, 0, 0), MAX_TIME=20):
+        import heapq
+
+        if self.debris_by_time is None:
+            self.debris_by_time = {0: self.debris_map}
+            for t in range(1, MAX_TIME + 1):
+                self.__track_debris(self.debris_map, t)
+
+        heap = [(0, base_health if base_health is not None else 0, start)]
+        visited = set()
+        min_time = float('inf')
+
+        while heap:
+            time, health, pos = heapq.heappop(heap)
+
+            if (pos, time) in visited:
+                continue
+            visited.add((pos, time))
+
+            if pos == target:
+                min_time = min(min_time, time)
+                continue  # Keep going to find a possibly smaller time
+
+            if base_health is not None and health <= 0:
+                continue
+
+            next_time = time + 1
+            if next_time > MAX_TIME:
+                continue
+
+            if next_time not in self.debris_by_time:
+                self.__track_debris(self.debris_map, next_time)
+            occupied = self.debris_by_time[next_time]
+
+            for move in self.ALL_MOVES:
+                next_pos = self.__move_in_dimension(pos, move, 1)
+                if base_health is None:
+                    if next_pos not in occupied or next_pos == start:
+                        heapq.heappush(heap, (next_time, 0, next_pos))
+                else:
+                    colliding = len(occupied.get(next_pos, []))
+                    if next_pos == start:
+                        colliding = 0
+                    new_health = health - colliding
+                    if new_health >= 0:
+                        heapq.heappush(heap, (next_time, new_health, next_pos))
+
+        return min_time if min_time != float('inf') else -1
+
+feasible, target_coords = ((10, 15, 60, 3), (9, 14, 59, 0))
 
 sub = Submarine(input_data, feasible)
 

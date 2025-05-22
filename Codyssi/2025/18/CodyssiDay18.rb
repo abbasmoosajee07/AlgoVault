@@ -9,157 +9,132 @@ Brief: [Code/Problem Description]
 #!/usr/bin/env ruby
 
 require 'pathname'
-require 'set'
 require 'time'
-require 'algorithms'
+require 'matrix'
+start_time = Time.now
 
 # Define file name and extract complete path to the input file
 D18_file = "Day18_input.txt"
 D18_file_path = Pathname.new(__FILE__).dirname + D18_file
 
-start_time = Time.now
-
 input_data = File.read(D18_file_path).strip.split("\n")
 
-feasible_spaces = {
-  "Day18_input1.txt" => [[10, 15, 60, 3], [9, 14, 59, 0]],
-  "Day18_input2.txt" => [[3, 3, 5, 3], [2, 2, 4, 0]],
-  "Day18_input.txt" => [[10, 15, 60, 3], [9, 14, 59, 0]],
-  "Day18_input3.txt" => [[10, 15, 60, 3], [9, 14, 59, 0]]
-}
+data = File.readlines(D18_file_path, chomp: true)
+feasible, target_coords = [[10, 15, 60, 3], [9, 14, 59, 0]]
 
-feasible, target_coords = feasible_spaces[D18_file]
+DIM_X, DIM_Y, DIM_Z, DIM_A = feasible
+DIM_XYZA = DIM_X * DIM_Y * DIM_Z * DIM_A
+DIM_YZA = DIM_Y * DIM_Z * DIM_A
+DIM_ZA = DIM_Z * DIM_A
+DEBRIS_CYCLE = DIM_X.lcm(DIM_Y).lcm(DIM_Z).lcm(DIM_A)
+MAX_SAFE_HITS = 3
 
-class Submarine
-  attr_reader :debris_map
+def idx(x, y, z, a)
+  x * DIM_YZA + y * DIM_ZA + z * DIM_A + a + 1
+end
 
-  def initialize(all_rules, feasible_space)
-    @idx_map = {"x" => 0, "y" => 1, "z" => 2, "a" => 3}
-    @rule_dict = {}
-    all_rules.each { |rule| parse_rules(rule) }
+def idxr(pos)
+  x, rem = pos.divmod(DIM_YZA)
+  y, rem = rem.divmod(DIM_ZA)
+  z, rem = rem.divmod(DIM_A)
+  a = rem - 1
+  [x, y, z, a]
+end
 
-    min_limits = [0, 0, 0, -1]
-    @space_region = {
-      "x" => (min_limits[0]...feasible_space[0]),
-      "y" => (min_limits[1]...feasible_space[1]),
-      "z" => (min_limits[2]...feasible_space[2]),
-      "a" => (min_limits[3]...feasible_space[3] - 1)
-    }
+debris = Array.new(DEBRIS_CYCLE) { Array.new(DIM_XYZA, 0) }
 
-    @all_coords = @space_region["x"].to_a.product(
-      @space_region["y"].to_a,
-      @space_region["z"].to_a,
-      @space_region["a"].to_a
-    )
-  end
+data.each do |line|
+  s = line.split
+  ss = s[2].split("+")
+  fx = ss[0][..-2].to_i
+  fy = ss[1][..-2].to_i
+  fz = ss[2][..-2].to_i
+  fa = ss[3][..-2].to_i
+  d = s[4].to_i
+  r = s[7].to_i
+  vx = s[11][1..-2].to_i
+  vy = s[12][0..-2].to_i
+  vz = s[13][0..-2].to_i
+  va = s[14][0..-2].to_i
 
-  def parse_rules(rule)
-    rule_no_str, info = rule.split(": ", 2)
-    rule_no = rule_no_str.gsub("RULE ", "").to_i
-    pattern = /(\d+)x\+(\d+)y\+(\d+)z\+(\d+)a DIVIDE (\d+) HAS REMAINDER (\d+) \| DEBRIS VELOCITY \((-?\d+), (-?\d+), (-?\d+), (-?\d+)\)/
-
-    match = pattern.match(info)
-    values = match.captures.map(&:to_i)
-
-    @rule_dict[rule_no] = {
-      "x" => values[0], "y" => values[1], "z" => values[2], "a" => values[3],
-      "div" => values[4], "rem" => values[5],
-      "vx" => values[6], "vy" => values[7], "vz" => values[8], "va" => values[9]
-    }
-  end
-
-  def check_debris(coords, rule_no)
-    rule = @rule_dict[rule_no]
-    total = rule["x"] * coords[0] + rule["y"] * coords[1] + rule["z"] * coords[2] + rule["a"] * coords[3]
-    total % rule["div"] == rule["rem"]
-  end
-
-  def count_debris
-    @debris_map = []
-    @all_coords.each do |coords|
-      @rule_dict.each_key do |rule_no|
-        @debris_map << [rule_no, coords] if check_debris(coords, rule_no)
+  (0...DIM_XYZA).each do |pos|
+    x, y, z, a = idxr(pos)
+    if (fx * x + fy * y + fz * z + fa * a) % d == r
+      debris[0][idx(x, y, z, a)] += 1
+      (1...DEBRIS_CYCLE).each do |t|
+        x = (x + vx) % DIM_X
+        y = (y + vy) % DIM_Y
+        z = (z + vz) % DIM_Z
+        a = (a + va + 1) % DIM_A - 1
+        debris[t][idx(x, y, z, a)] += 1
       end
     end
-    @debris_map.length
-  end
-
-  def wrapped_move(pos, delta, dim, wrapping)
-    min_val = @space_region[dim].min
-    max_val = @space_region[dim].max
-    range_size = @space_region[dim].size
-    new_pos = pos + delta
-
-    if wrapping
-      (new_pos - min_val) % range_size + min_val
-    elsif new_pos.between?(min_val, max_val)
-      new_pos
-    else
-      pos
-    end
-  end
-
-  def move_particle(rule, particle, time = 1, wrapping = true)
-    new_coords = []
-    @idx_map.each do |dim, idx|
-      velocity = @rule_dict[rule]["v#{dim}"]
-      delta = velocity * time
-      new_coords[idx] = wrapped_move(particle[idx], delta, dim, wrapping)
-    end
-    new_coords
-  end
-
-  def move_in_dimension(coords, move, time = 1, wrapping = false)
-    dim, velocity = move
-    idx = @idx_map[dim]
-    delta = velocity * time
-    new_coords = coords.dup
-    new_coords[idx] = wrapped_move(coords[idx], delta, dim, wrapping)
-    new_coords
-  end
-
-  def find_flight_path(target, start = [0, 0, 0, 0])
-    all_moves = ["x", "y", "z"].product([1, -1, 0])
-    position_history = {0 => @debris_map.dup}
-    min_time = Float::INFINITY
-    queue = [[start, 0]]
-    visited = Set.new
-    count = 0
-
-    until queue.empty?
-      current_pos, time_step = queue.shift
-      count += 1
-
-      if current_pos == target
-        min_time = [min_time, time_step].min
-        next
-      end
-
-      next if time_step > min_time || visited.include?([current_pos, time_step])
-      visited.add([current_pos, time_step])
-
-      next_time = time_step + 1
-      occupied = position_history[next_time] || Set.new(@debris_map.map { |rule, pos| move_particle(rule, pos, next_time) })
-      position_history[next_time] ||= occupied
-
-      all_moves.each do |move|
-        next_pos = move_in_dimension(current_pos, move)
-        if !occupied.include?(next_pos) || next_pos == start
-          queue << [next_pos, next_time]
-        end
-      end
-    end
-
-    min_time
   end
 end
 
-sub = Submarine.new(input_data, feasible)
+ans1 = debris[0].sum
+puts "Part 1: #{ans1}"
 
-debris = sub.count_debris
-puts "Part 1: #{debris}"
+start = idx(0, 0, 0, 0)
+target = idx(target_coords[0], target_coords[1], target_coords[2], target_coords[3])
+safe = Array.new(DIM_XYZA, false)
+safe[start] = true
 
-flight_time = sub.find_flight_path(target_coords)
-puts "Part 2: #{flight_time}"
+t = 0
+until safe[target]
+  t += 1
+  safe_new = safe.dup
+  safe.each_with_index do |ok, pos|
+    next unless ok
+    x, y, z, a = idxr(pos)
+    safe_new[idx(x - 1, y, z, a)] = true if x > 0
+    safe_new[idx(x + 1, y, z, a)] = true if x < DIM_X - 1
+    safe_new[idx(x, y - 1, z, a)] = true if y > 0
+    safe_new[idx(x, y + 1, z, a)] = true if y < DIM_Y - 1
+    safe_new[idx(x, y, z - 1, a)] = true if z > 0
+    safe_new[idx(x, y, z + 1, a)] = true if z < DIM_Z - 1
+  end
+  safe = safe_new
+  debris[t % DEBRIS_CYCLE].each_with_index do |count, pos|
+    safe[pos] = false if count > 0
+  end
+  safe[start] = true
+end
+
+ans2 = t
+puts "Part 2: #{ans2}"
+
+hits = Array.new(DIM_XYZA, MAX_SAFE_HITS + 1)
+hits[start] = 0
+
+t = 0
+while hits[target] > MAX_SAFE_HITS
+  t += 1
+  hits_new = hits.dup
+  hits.each_with_index do |hit_count, pos|
+    next if hit_count > MAX_SAFE_HITS
+    x, y, z, a = idxr(pos)
+    [[-1, 0], [1, 0]].each do |dx, _|
+      nx = x + dx
+      hits_new[idx(nx, y, z, a)] = [hits_new[idx(nx, y, z, a)], hit_count].min if (0...DIM_X).include?(nx)
+    end
+    [[-1, 0], [1, 0]].each do |dy, _|
+      ny = y + dy
+      hits_new[idx(x, ny, z, a)] = [hits_new[idx(x, ny, z, a)], hit_count].min if (0...DIM_Y).include?(ny)
+    end
+    [[-1, 0], [1, 0]].each do |dz, _|
+      nz = z + dz
+      hits_new[idx(x, y, nz, a)] = [hits_new[idx(x, y, nz, a)], hit_count].min if (0...DIM_Z).include?(nz)
+    end
+  end
+  hits = hits_new
+  debris[t % DEBRIS_CYCLE].each_with_index do |count, pos|
+    hits[pos] += count
+  end
+  hits[start] = 0
+end
+
+ans3 = t
+puts "Part 3: #{ans3}"
 
 # puts "Execution Time = #{Time.now - start_time}s"
