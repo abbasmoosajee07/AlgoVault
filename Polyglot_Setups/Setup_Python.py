@@ -38,10 +38,11 @@ def create_python_script(
 
 #!/usr/bin/env python3
 
-import os, re, copy
+import os, re, copy, time
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+start_time = time.time()
 
 # Load the input data from the specified file path
 D{formatted_day}_file = "Day{formatted_day}_input.txt"
@@ -51,6 +52,8 @@ D{formatted_day}_file_path = os.path.join(os.path.dirname(os.path.abspath(__file
 with open(D{formatted_day}_file_path) as file:
     input_data = file.read().strip().split('\\n')
 print(input_data)
+
+print(f"Execution Time = {{time.time() - start_time:.5f}}s")
 '''
 
         # Write the template content to the Python script file

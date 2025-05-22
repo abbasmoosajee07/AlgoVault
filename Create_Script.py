@@ -42,9 +42,9 @@ def generate_header(day, year, author):
 
     # Construct the header content
     header_dict = {
-    "i18n": """i18n Puzzles - Puzzle {day}
+    "i18n": f"""i18n Puzzles - Puzzle {day}
 Solution Started: {month} {current_time.tm_mday}, {current_time.tm_year}
-Puzzle Link: https://i18n-puzzles.com/puzzle/%7Bday%7D/
+Puzzle Link: https://i18n-puzzles.com/puzzle/{day}
 Solution by: {author}
 Brief: [Code/Problem Description]
 """}
