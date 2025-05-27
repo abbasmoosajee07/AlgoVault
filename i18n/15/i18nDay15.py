@@ -8,7 +8,8 @@ Brief: [24/5 Support]
 #!/usr/bin/env python3
 
 import os, re, copy
-import time as time1
+import time as bench_time
+
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -17,7 +18,7 @@ from datetime import datetime, timedelta, time, timezone
 from zoneinfo import ZoneInfo
 from dateutil import tz  # only needed for UTC conversion formatting
 
-start_time = time1.time()
+start_time = bench_time.time()
 
 # Load the input data from the specified file path
 D15_file = "Day15_input1.txt"
@@ -44,11 +45,11 @@ class OfficeCalendar:
 
         self.start_date = datetime(2022, 1, 1)
         self.end_date = datetime(2022, 12, 31)
-        # Preview one office calendar (for testing/debug)
         self.office_calendar = self.parse_calendar_schedule(all_offices, "08:30-17:00")
+
         year, month, day = (2022, 4, 11)
-        year, month, day = (2022, 12, 9)
-        # year, month, day = (2022, 4, 18)
+        # year, month, day = (2022, 12, 9)
+        year, month, day = (2022, 4, 18)
         self.start_date = datetime(year, month, day)
         self.end_date =  self.start_date
         self.customer_calendar = self.parse_calendar_schedule(all_customers, "00:00-24:00")
@@ -100,7 +101,7 @@ class OfficeCalendar:
                 end_ts = int(end_dt_utc.timestamp())
 
                 # Add 1-minute interval timestamps to the set
-                timestamps.update(range(start_ts, end_ts +6000, 60))
+                timestamps.update(range(start_ts, end_ts + 0, 60))
 
             current_date += timedelta(days=1)
         # call = 0
@@ -115,24 +116,58 @@ class OfficeCalendar:
             location, time_zone, holidays = line_info
             holidays = holidays.split(";")
             calendar = self.__build_working_calendar(time_zone, holidays, working_hours)
-            corrected_loc = location.replace("TOPlap office in","")
-            full_calendar[corrected_loc.strip()] = calendar
+            corrected_loc = location.split()[-3:]# location.replace("TOPlap","")
+            full_calendar[' '.join(corrected_loc)] = calendar
             # print("Working minutes in calendar:", len(calendar))
         return full_calendar
+
+    def visualize_day(self, day: datetime):
+
+        day_start = int(datetime(day.year, day.month, day.day, 0, 0, tzinfo=timezone.utc).timestamp())
+        hour_blocks = list(range(25))  # 0 to 24
+
+        def get_hour_row(calendar, symbol):
+            row = ""
+            for hour in hour_blocks:
+                hour_start = day_start + hour * 3600
+                hour_end = hour_start + 3599
+                active = any(ts in calendar for ts in range(hour_start, hour_end + 1, 60))
+                row += symbol if active else " _"
+            return row
+
+        # Header with split hour digits
+        first_digits = "".join(f"{h//10} " for h in hour_blocks)
+        second_digits = "".join(f"{h%10} " for h in hour_blocks)
+
+        day_name = day.strftime('%A')
+        date_label = day.strftime('%d %B %Y')
+
+        print(f"{day_name:<15}Hour (UTC): {first_digits}")
+        print(f"{date_label:<15}            {second_digits}")
+
+        for loc, cal in self.office_calendar.items():
+            row = get_hour_row(cal, " S")
+            print(f"{loc:>25} {row}")
+        for loc, cal in self.customer_calendar.items():
+            row = get_hour_row(cal, " R")
+            print(f"{loc:>25} {row}")
 
     def calculate_overtime(self):
         all_global_offices = set()
         for office_loc, calendar in self.office_calendar.items():
             all_global_offices.update(calendar)
-        # print(len(all_global_offices))
+        print(len(all_global_offices))
         overtime = []
         total_overtime = set()
         for customer_loc, customer_cal in self.customer_calendar.items():
-            diff =  customer_cal - all_global_offices
+            office_copy = all_global_offices.copy()
+            diff =  customer_cal - office_copy
             total_overtime.update(diff)
-            print(customer_loc, len(diff))
+            print(customer_loc, len(customer_cal) / 60, len(diff))
             overtime.append(len(diff))
         # print(len(total_overtime))
+        self.visualize_day(self.start_date)
+
         return max(overtime) - min(overtime)
 
 
@@ -141,8 +176,49 @@ calendar = OfficeCalendar(offices, customers)
 overtime_diff = calendar.calculate_overtime()
 print("Difference in Overtime:", overtime_diff)
 
-print(f"Execution Time = {time1.time() - start_time:.5f}s")
+print(f"Execution Time = {bench_time.time() - start_time:.5f}s")
+
+# Monday                  Hour (UTC): 0 1 2 3 4 5 6 7 8 9 1 1 1 1 1 1 1 1 1 1 2 2 2 2 #
+# 11 April 2022                                           0 1 2 3 4 5 6 7 8 9 0 1 2 3 #
+#                                     | | | | | | | | | | | | | | | | | | | | | | | | #
+#                           Melbourne SSSSSSSSSSSSSS                               SSS#
+#                               Delft              SSSSSSSSSSSSSSSSS                  #
+#                          Manchester                SSSSSSSSSSSSSSSSS                #
+#                           São Paulo                        SSSSSSSSSSSSSSSSS        #
+#                             Orlando                          SSSSSSSSSSSSSSSSS      #
+#                                     | | | | | | | | | | | | | | | | | | | | | | | | #
+#                  FaxSchool, Halifax       RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR#
+#    El Universidad Libre de Santiago         RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR#
+#                    Tokyo Media Corp RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR#
+
+
+# Friday                  Hour (UTC): 0 1 2 3 4 5 6 7 8 9 1 1 1 1 1 1 1 1 1 1 2 2 2 2 #
+# 09 December 2022                                        0 1 2 3 4 5 6 7 8 9 0 1 2 3 #
+#                                     | | | | | | | | | | | | | | | | | | | | | | | | #
+#                           Melbourne SSSSSSSSSSSS                                    #
+#                               Delft                SSSSSSSSSSSSSSSSS                #
+#                          Manchester                  SSSSSSSSSSSSSSSSS              #
+#                           São Paulo                        SSSSSSSSSSSSSSSSS        #
+#                             Orlando                            SSSSSSSSSSSSSSSSS    #
+#                                     | | | | | | | | | | | | | | | | | | | | | | | | #
+#                  FaxSchool, Halifax RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR#
+#    El Universidad Libre de Santiago RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR#
+#                    Tokyo Media Corp RRRRRRRRRRRRRRRRRRRRRRRRRRRRRR                  #
+
+# Monday                  Hour (UTC): 0 1 2 3 4 5 6 7 8 9 1 1 1 1 1 1 1 1 1 1 2 2 2 2 #
+# 18 April 2022                                           0 1 2 3 4 5 6 7 8 9 0 1 2 3 #
+#                                     | | | | | | | | | | | | | | | | | | | | | | | | #
+#                           Melbourne                                              SSS#
+#                               Delft              SSSSSSSSSSSSSSSSS                  #
+#                          Manchester                SSSSSSSSSSSSSSSSS                #
+#                           São Paulo                        SSSSSSSSSSSSSSSSS        #
+#                             Orlando                          SSSSSSSSSSSSSSSSS      #
+#                                     | | | | | | | | | | | | | | | | | | | | | | | | #
+#                  FaxSchool, Halifax       RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR#
+#    El Universidad Libre de Santiago                                                 #
+#                    Tokyo Media Corp RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR#
 
 # FaxSchool, Halifax requires 41730 minutes of overtime.
 # El Universidad Libre de Santiago requires 41820 minutes of overtime
 # Tokyo Media Corp requires 44760 minutes of overtime.
+# In this case: 44760-41730 = 3030 minutes.
