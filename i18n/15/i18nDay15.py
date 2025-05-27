@@ -20,7 +20,7 @@ from dateutil import tz  # only needed for UTC conversion formatting
 start_time = time1.time()
 
 # Load the input data from the specified file path
-D15_file = "Day15_input.txt"
+D15_file = "Day15_input1.txt"
 D15_file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), D15_file)
 
 # Read and sort input data into a grid
@@ -29,117 +29,120 @@ with open(D15_file_path) as file:
     offices, customers = [data_set.split('\n') for data_set in input_data]
 
 class OfficeCalendar:
-    def __init__(self, all_offices, customers):
-        self.global_offices, self.customers = all_offices, customers
-        # 0:00 UTC on Jan 1 2022, up to 24:00 UTC on Dec 31 2022
-        YEAR_START, YEAR_END = ("2022-01-01 00:00 UTC", "2022-12-31 24:00 UTC")
-        WORKING_HOURS = ("08:30", "17:30")
-        WORKING_HOURS = "Monday to Friday, from 08:30 to 17:00"
-        self.__build_timeset(2022)
-        for office in all_offices:
-            self.parse_office(office.split("	"))
+    def __init__(self, all_offices, all_customers):
+        self.global_offices = all_offices
+        self.customers = all_customers
+        self.count = 0
+        self.BASE_TIMESET = self.__build_timeset(2022)
 
-    def __timestamp_to_datetime(self, timestamp: int, tz_name: str) -> datetime:
-        if tz_name.upper() == "UTC":
-            return datetime.fromtimestamp(timestamp, tz=timezone.utc)
-        else:
-            return datetime.fromtimestamp(timestamp, tz=ZoneInfo(tz_name))
+        weekday_map = {
+            'Monday': 0, 'Tuesday': 1, 'Wednesday': 2,
+            'Thursday': 3, 'Friday': 4, 'Saturday': 5, 'Sunday': 6
+        }
+        weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
+        self.weekday_nums = {weekday_map[day] for day in weekdays}
 
-    def __build_timeset(self, YEAR):
-        start = int(datetime(YEAR, 1, 1).timestamp())
-        end = int(datetime(YEAR + 1, 1, 1).timestamp())
+        self.start_date = datetime(2022, 1, 1)
+        self.end_date = datetime(2022, 12, 31)
+        # Preview one office calendar (for testing/debug)
+        self.office_calendar = self.parse_calendar_schedule(all_offices, "08:30-17:00")
+        year, month, day = (2022, 4, 11)
+        year, month, day = (2022, 12, 9)
+        # year, month, day = (2022, 4, 18)
+        self.start_date = datetime(year, month, day)
+        self.end_date =  self.start_date
+        self.customer_calendar = self.parse_calendar_schedule(all_customers, "00:00-24:00")
 
-        timestamps = set(range(start, end, 60))  # step = 60 seconds
-        timestamp = sorted(list(timestamps))[1]
-        print(timestamp)
+        print("Offices parsed:", self.count)
 
-        dt_utc = datetime.fromtimestamp(timestamp, timezone.utc)
-        print(dt_utc)  # 2025-01-01 00:00:00+00:00
+    def __timestamp_to_datetime(self, timestamp: int, tz_name: str = "UTC") -> datetime:
+        return datetime.fromtimestamp(timestamp, tz=timezone.utc if tz_name.upper() == "UTC" else ZoneInfo(tz_name))
 
-        print("UTC: ", self.__timestamp_to_datetime(timestamp, "UTC"))
-        print("Melbourne: ", self.__timestamp_to_datetime(timestamp, "Australia/Melbourne"))
-        print("London: ", self.__timestamp_to_datetime(timestamp, "Europe/London"))
+    def __build_timeset(self, year):
+        start = int(datetime(year, 1, 1).timestamp())
+        end = int(datetime(year + 1, 1, 1).timestamp())
+        return set(range(start, end, 60))  # 1-minute granularity
 
+    def __build_working_calendar(self, time_zone, holidays, working_hours):
+        self.count += 1
+        work_start, work_end = working_hours.split('-')
+        start_date = self.start_date
+        end_date =  self.end_date
+
+        if work_end == "24:00":
+            work_end = "23:59"
+            # work_end = "00:00"
+            # end_date = start_date + timedelta(days=1)
+        # print(start_date, work_start, end_date, work_end)
+
+        work_start = datetime.strptime(work_start, "%H:%M").time()
+        work_end = datetime.strptime(work_end, "%H:%M").time()
+        converted_holidays = [datetime.strptime(date_str, '%d %B %Y').strftime('%Y-%m-%d') for date_str in holidays]
+        tz_local = ZoneInfo(time_zone)
+        timestamps = set()
+
+        current_date = start_date.date()
+        while current_date <= end_date.date():
+            # print(type(current_date))
+            if f"{current_date}" in converted_holidays:
+                pass
+            elif datetime.combine(current_date, time.min).weekday() in self.weekday_nums:
+                # Define local start and end datetime for the workday
+                start_dt_local = datetime.combine(current_date, work_start, tzinfo=tz_local)
+                end_dt_local = datetime.combine(current_date, work_end, tzinfo=tz_local)
+
+                # Convert to UTC
+                start_dt_utc = start_dt_local.astimezone(tz.UTC)
+                end_dt_utc = end_dt_local.astimezone(tz.UTC)
+
+                # Compute timestamp range in seconds (1-minute steps)
+                start_ts = int(start_dt_utc.timestamp())
+                end_ts = int(end_dt_utc.timestamp())
+
+                # Add 1-minute interval timestamps to the set
+                timestamps.update(range(start_ts, end_ts +6000, 60))
+
+            current_date += timedelta(days=1)
+        # call = 0
+        # test = list(sorted(timestamps))[call]
+        # print(time_zone, self.__timestamp_to_datetime(test, time_zone), self.__timestamp_to_datetime(test))
         return timestamps
 
-    def __build_working_calendar(self, time_zone, holidays):
-        start = int(datetime(2022, 1, 1).timestamp())
-        end = int(datetime(2022 + 1, 1, 1).timestamp())
-
-        timestamps = set(range(start, end, 60))  # step = 60 seconds
-        timestamp = sorted(list(timestamps))[1]
-        # print(timestamp)
-
-        dt_utc = datetime.fromtimestamp(timestamp, timezone.utc)
-
-        return timestamps
-
-    def parse_office(self, office_info):
-        print('  '.join(office_info))
-        office_loc, time_zone, holidays = office_info
-        office_loc = office_loc.split(" ")[-1]
-        holidays = holidays.split(";")
-        calendar = self.__build_working_calendar(time_zone, holidays)
-        # print(office_loc, time_zone, holidays)
-        return
-
-    def parse_customer(self, customer_info):
-        return
+    def parse_calendar_schedule(self, all_data, working_hours):
+        full_calendar = {}
+        for line in all_data[:]:
+            line_info = line.split("\t")
+            location, time_zone, holidays = line_info
+            holidays = holidays.split(";")
+            calendar = self.__build_working_calendar(time_zone, holidays, working_hours)
+            corrected_loc = location.replace("TOPlap office in","")
+            full_calendar[corrected_loc.strip()] = calendar
+            # print("Working minutes in calendar:", len(calendar))
+        return full_calendar
 
     def calculate_overtime(self):
-        return 1
+        all_global_offices = set()
+        for office_loc, calendar in self.office_calendar.items():
+            all_global_offices.update(calendar)
+        # print(len(all_global_offices))
+        overtime = []
+        total_overtime = set()
+        for customer_loc, customer_cal in self.customer_calendar.items():
+            diff =  customer_cal - all_global_offices
+            total_overtime.update(diff)
+            print(customer_loc, len(diff))
+            overtime.append(len(diff))
+        # print(len(total_overtime))
+        return max(overtime) - min(overtime)
 
-# calendar = OfficeCalendar(offices, customers)
 
-# overtime_diff = calendar.calculate_overtime()
-# print("Difference in Overtime:", overtime_diff)
+calendar = OfficeCalendar(offices, customers)
 
-
-def generate_timestamps(tz_name='America/New_York', holidays = []):
-    # Setup
-    weekday_map = {
-        'Monday': 0, 'Tuesday': 1, 'Wednesday': 2,
-        'Thursday': 3, 'Friday': 4, 'Saturday': 5, 'Sunday': 6
-    }
-    weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
-    weekday_nums = {weekday_map[day] for day in weekdays}
-
-    start_date = datetime(2022, 1, 1)
-    end_date = datetime(2022, 12, 31)
-    start_time_str = '08:30'
-    end_time_str = '17:00'
-    start_time = datetime.strptime(start_time_str, "%H:%M").time()
-    end_time = datetime.strptime(end_time_str, "%H:%M").time()
-    tz = ZoneInfo(tz_name)
-
-    current = start_date.date()
-    end = end_date.date()
-    timestamps = []
-
-    interval = timedelta(minutes=1)
-
-    while current <= end:
-        if current.weekday() in weekday_nums:
-            # Combine once per day
-            local_start = datetime.combine(current, start_time, tzinfo=tz)
-            local_end = datetime.combine(current, end_time, tzinfo=tz)
-
-            # Compute UTC offset once per day (fast DST handling)
-            offset = local_start.utcoffset()
-            utc_start = (local_start - offset).replace(tzinfo=None)
-            num_minutes = int((local_end - local_start).total_seconds() // 60)
-
-            # Fast loop, all naive UTC timestamps
-            for i in range(num_minutes + 1):
-                t = utc_start + i * interval
-                ts = t.strftime("%Y-%m-%d %H:%M:%S+00:00")
-                timestamps.append(ts)
-
-        current += timedelta(days=1)
-
-    return timestamps
-
-timestamps = generate_timestamps()
-print(len(timestamps))
+overtime_diff = calendar.calculate_overtime()
+print("Difference in Overtime:", overtime_diff)
 
 print(f"Execution Time = {time1.time() - start_time:.5f}s")
+
+# FaxSchool, Halifax requires 41730 minutes of overtime.
+# El Universidad Libre de Santiago requires 41820 minutes of overtime
+# Tokyo Media Corp requires 44760 minutes of overtime.
