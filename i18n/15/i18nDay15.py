@@ -149,4 +149,4 @@ print("Difference in Overtime:", overtime_diff)
 # test_date = datetime(year, month, day)
 # calendar.visualize_day(test_date + timedelta(days=0))
 
-print(f"Execution Time = {time.time() - start_time:.5f}s")
+# print(f"Execution Time = {time.time() - start_time:.5f}s")
