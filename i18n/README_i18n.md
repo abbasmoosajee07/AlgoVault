@@ -18,5 +18,5 @@ This repository contains coding solutions for the i18n puzzles.
 12. **Puzzle 12- Sorting It Out**: Sorting it out a list of names in a phone directory
 13. **Puzzle 13- Gulliver's puzzle dictionary**: Fairly similar to Puzzle 6, except for identifying the correct encoding.
 14. **Puzzle 14- Metrification in Japan**: Quite fun learning about a different number system, however, debugging and handling of fractions took a second.
-15. **Puzzle 15- 24/5 support**:
+15. **Puzzle 15- 24/5 support**: Create a schedule to map global office schedules and customer requests, and calculate required overtime.
 ---

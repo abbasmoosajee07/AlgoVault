@@ -2,7 +2,7 @@
 # # Solved in {2025}
 # Puzzle Link: https://i18n-puzzles.com/
 # Solution by: [Abbas Moosajee]
-# Brief: [Run all 2025 scripts]
+# Brief: [Run all i18n scripts]
 
 #!/usr/bin/env python3
 import os
@@ -11,8 +11,8 @@ from Benchmarks.execute_challenge import execute_challenge_scripts
 if __name__ == "__main__":
     # Define constants
     YEAR = "i18n"
-    CHALLENGE_NAME = 'Challenge'
-    DAYS_TO_RUN = range(1, 26)
+    CHALLENGE_NAME = 'Internationalization Puzzles'
+    DAYS_TO_RUN = range(1, 21)
     COLOR_2024 = "#673147"
     NUM_ITERATIONS = 3  # Number of iterations for benchmarking
 
