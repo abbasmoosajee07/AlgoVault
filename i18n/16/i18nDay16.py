@@ -76,6 +76,23 @@ class PipesGame:
         finish = max(grid) if finish is None else finish
         return grid, (start, finish)
 
+    def __build_graph(self, grid):
+        graph = defaultdict(set)
+        (min_r, min_c), (max_r, max_c) = self.start, self.finish
+        for (r, c), val in grid.items():
+            if not (min_r <= r <= max_r and min_c <= c <= max_c):
+                continue
+            if val not in self.VALID_SYMBOLS:
+                continue
+            for dir_sym, (dr, dc) in self.DIRECTIONS.items():
+                nr, nc = r + dr, c + dc
+                if (
+                    min_r <= nr <= max_r and min_c <= nc <= max_c
+                    and grid.get((nr, nc)) in self.VALID_SYMBOLS
+                ):
+                    graph[(r, c)].add((dir_sym, (nr, nc)))
+        return graph
+
     def __print_screen(self, grid, control_type = None, pos=(0, 0)):
 
         def print_grid(grid, pos):
@@ -185,110 +202,34 @@ class PipesGame:
 
         return min_rots
 
-    def __build_graph(self, grid):
-        graph = defaultdict(set)
-        (min_r, min_c), (max_r, max_c) = self.start, self.finish
-        for (r, c), val in grid.items():
-            if not (min_r <= r <= max_r and min_c <= c <= max_c):
-                continue
-            if val not in self.VALID_SYMBOLS:
-                continue
-            for dir_sym, (dr, dc) in self.DIRECTIONS.items():
-                nr, nc = r + dr, c + dc
-                if (
-                    min_r <= nr <= max_r and min_c <= nc <= max_c
-                    and grid.get((nr, nc)) in self.VALID_SYMBOLS
-                ):
-                    graph[(r, c)].add((dir_sym, (nr, nc)))
-        return graph
-
-    def auto_play(self, visualization = False):
-        grid = copy.deepcopy(self.init_grid)
-        rotations = defaultdict(int)
-        finalized = {self.finish, self.start}
-        total_rotations = 0
-        self.rots = 0
-
-        def valid_rotations(pos):
-            r, c = pos
-            target_dirs = {pos for dir, pos in self.grid_graph[pos]}
-            original = grid[pos]
-            possible = []
-            test_symbol = original
-            possible_conns = self.PIPE_CONNECTIONS.get(test_symbol, set())
-            for conn_dir in possible_conns:
-                dr, dc = self.DIRECTIONS[conn_dir]
-                nr, nc = r + dr, c + dc
-                if (nr, nc) in target_dirs:
-                    possible.append((nr, nc))
-            return possible
-
-        while True:
-            progress = False
-            if self.rots >= 10:
-                break
-            for pos in list(self.grid_graph.keys()):
-                if pos in finalized:
-                    continue
-                options = valid_rotations(pos)
-                for test_pos in options:
-                    rotations, grid = self.__rotate_pipe(test_pos, grid, rotations)
-                    if test_pos not in finalized:
-                        total_rotations += 1
-                        self.rots += 1
-                    finalized.add(pos)
-                progress = True
-
-                # VISUALIZATION: print grid and rotation count after each finalized pipe
-                if visualization:
-                    print(f"Finalized pipe at {pos} with rotation(s). Total rotations: {total_rotations}")
-                    self.__print_screen(grid, control_type=None, pos=pos)
-                    time.sleep(0.5)  # half second delay to see the progress, adjust or remove as needed
-
-            if not progress:
-                break
-
-        print("Auto-play complete. Total rotations:", total_rotations)
-        return sum(rotations.values())
-
     def auto_play(self, visualization=False):
-        from collections import defaultdict
-        import copy, time
-
         grid = copy.deepcopy(self.init_grid)
         rotations = defaultdict(int)
         finalized = {self.start, self.finish}
         total_rotations = 0
 
-        def valid_rotations(pos):
+        def valid_rotations(pos, g, finalized_set):
             r, c = pos
-            original = grid[pos]
+            original = g[pos]
             possible = []
             neighbors = self.grid_graph[pos]
-
             test_symbol = original
             for rot in range(4):
                 connections = self.PIPE_CONNECTIONS.get(test_symbol, set())
                 ok = True
-
                 for dir_name in connections:
                     dr, dc = self.DIRECTIONS[dir_name]
                     neighbor = (r + dr, c + dc)
-                    neighbor_char = grid.get(neighbor)
-
+                    neighbor_char = g.get(neighbor)
                     if neighbor_char not in self.VALID_SYMBOLS:
                         ok = False
                         break
-
                     neighbor_conns = self.PIPE_CONNECTIONS.get(neighbor_char, set())
-
-                    if neighbor in finalized:
-                        # Neighbor is locked — must be compatible
+                    if neighbor in finalized_set:
                         if self.REVERSE_DIR[dir_name] not in neighbor_conns:
                             ok = False
                             break
                     else:
-                        # Try all 4 rotations of neighbor to see if compatible
                         temp = neighbor_char
                         match_found = False
                         for _ in range(4):
@@ -300,40 +241,62 @@ class PipesGame:
                         if not match_found:
                             ok = False
                             break
-
                 if ok:
                     possible.append(rot)
-
                 test_symbol, _ = self.ROTATION_MAP.get(test_symbol, (test_symbol, 0))
-
             return possible
 
-        while True:
-            progress = False
-            for pos in list(self.grid_graph.keys()):
-                if pos in finalized:
-                    continue
+        def solve(g, f, rot, depth=0):
+            made_progress = True
+            while made_progress:
+                made_progress = False
+                for pos in list(self.grid_graph.keys()):
+                    if pos in f:
+                        continue
+                    options = valid_rotations(pos, g, f)
+                    if len(options) == 1:
+                        r = options[0]
+                        for _ in range(r):
+                            rot, g = self.__rotate_pipe(pos, g, rot)
+                        f.add(pos)
+                        if visualization:
+                            print(f"Finalized pipe at {pos} with {r} rotation(s). Total rotations: {sum(rot.values())}")
+                            self.__print_screen(g, control_type=None, pos=pos)
+                            time.sleep(0.5)
+                        made_progress = True
+            # Check if complete
+            if len(f) == len(self.grid_graph):
+                return g, rot
+            # Backtracking step
+            nonfinal = [pos for pos in self.grid_graph if pos not in f]
+            nonfinal.sort(key=lambda p: len(valid_rotations(p, g, f)))
+            for pos in nonfinal:
+                options = valid_rotations(pos, g, f)
+                if len(options) <= 1:
+                    continue  # Already handled or unsolvable
+                for r in options:
+                    new_grid = copy.deepcopy(g)
+                    new_rot = copy.deepcopy(rot)
+                    new_final = f.copy()
+                    for _ in range(r):
+                        new_rot, new_grid = self.__rotate_pipe(pos, new_grid, new_rot)
+                    new_final.add(pos)
+                    result = solve(new_grid, new_final, new_rot, depth + 1)
+                    if result:
+                        return result
+            return None
 
-                options = valid_rotations(pos)
+        result = solve(grid, finalized, rotations)
+        if result:
+            final_grid, final_rotations = result
+            if visualization:
+                print("Auto-play complete. Total rotations:", sum(final_rotations.values()))
+                self.__print_screen(final_grid)
 
-                if len(options) == 1:
-                    rot = options[0]
-                    for _ in range(rot):
-                        rotations, grid = self.__rotate_pipe(pos, grid, rotations)
-                        total_rotations += 1
-                    finalized.add(pos)
-                    progress = True
-
-                    if visualization:
-                        print(f"Finalized pipe at {pos} with {rot} rotation(s). Total rotations: {total_rotations}")
-                        self.__print_screen(grid, control_type=None, pos=pos)
-                        time.sleep(0.5)
-
-            if not progress:
-                break
-
-        print("Auto-play complete. Total rotations:", total_rotations)
-        return sum(rotations.values())
+            return sum(final_rotations.values())
+        else:
+            print("Auto-play failed to solve the puzzle.")
+            return None
 
 
 pipes = PipesGame(input_data)
