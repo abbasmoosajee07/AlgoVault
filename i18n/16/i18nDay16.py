@@ -7,12 +7,12 @@ Brief: [8-bit unboxing]
 
 #!/usr/bin/env python3
 
-import os, re, copy, time, click
-from collections import defaultdict, deque
+import os, re, copy, sys, time, click
+from collections import defaultdict, deque, namedtuple
 start_time = time.time()
 
 # Load the input data from the specified file path
-D16_file = "Day16_input1.txt"
+D16_file = "Day16_input.txt"
 D16_file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), D16_file)
 
 # Read and sort input data into a grid
@@ -21,79 +21,137 @@ with open(D16_file_path, encoding = "CP437") as file:
 
 class PipesGame:
     REMOTE_CONTROL = {1: "Numbers", 2: "Arrows", 3: "Auto"}
-    REVERSE_DIR = { '^': 'v', 'v': '^', '<': '>', '>': '<'}
-    DIRECTIONS = {'^': (-1, 0), 'v': (1, 0), '<': (0, -1), '>': (0, 1)}
-    VALID_SYMBOLS = list("╕╫╞─╒╠╓┘├═╩╔╖╗┬┤╙┴╢╚╪╦└┌╧║╜╣│╘╟╡╛┼╥╬┐╨╤╝")
-    PIPE_CONNECTIONS = {
-        '═': {'<', '>'}, '─': {'<', '>'},
-        '║': {'^', 'v'}, '│': {'^', 'v'},
-        '┌': {'>', 'v'}, '┐': {'<', 'v'},
-        '└': {'>', '^'}, '┘': {'<', '^'},
-        '╔': {'>', 'v'}, '╗': {'<', 'v'},
-        '╚': {'>', '^'}, '╝': {'<', '^'},
-        '├': {'^', 'v', '>'}, '┤': {'^', 'v', '<'},
-        '╞': {'^', 'v', '>'}, '╡': {'^', 'v', '<'},
-        '╟': {'^', 'v', '>'}, '╢': {'^', 'v', '<'},
-        '╠': {'^', 'v', '>'}, '╣': {'^', 'v', '<'},
-        '┬': {'<', '>', 'v'}, '╤': {'<', '>', 'v'},
-        '┴': {'<', '>', '^'}, '╧': {'<', '>', '^'},
-        '╥': {'<', '>', 'v'}, '╦': {'<', '>', 'v'},
-        '╨': {'<', '>', '^'}, '╩': {'<', '>', '^'},
-        '┼': {'^', 'v', '<', '>'},
-        '╫': {'^', 'v', '<', '>'},
-        '╪': {'^', 'v', '<', '>'},
+    BoxChar = namedtuple("BoxChar", ["N", "E", "S", "W"])
+
+    box_chars = {
+        " ": BoxChar(0,0,0,0), "│": BoxChar(1,0,1,0), "┤": BoxChar(1,0,1,1),
+        "╡": BoxChar(1,0,1,2), "╢": BoxChar(2,0,2,1), "╖": BoxChar(0,0,2,1),
+        "╕": BoxChar(0,0,1,2), "╣": BoxChar(2,0,2,2), "║": BoxChar(2,0,2,0),
+        "╗": BoxChar(0,0,2,2), "╝": BoxChar(2,0,0,2), "╜": BoxChar(2,0,0,1),
+        "╛": BoxChar(1,0,0,2), "┐": BoxChar(0,0,1,1), "└": BoxChar(1,1,0,0),
+        "┴": BoxChar(1,1,0,1), "┬": BoxChar(0,1,1,1), "├": BoxChar(1,1,1,0),
+        "─": BoxChar(0,1,0,1), "┼": BoxChar(1,1,1,1), "╞": BoxChar(1,2,1,0),
+        "╟": BoxChar(2,1,2,0), "╚": BoxChar(2,2,0,0), "╔": BoxChar(0,2,2,0),
+        "╩": BoxChar(2,2,0,2), "╦": BoxChar(0,2,2,2), "╠": BoxChar(2,2,2,0),
+        "═": BoxChar(0,2,0,2), "╬": BoxChar(2,2,2,2), "╧": BoxChar(1,2,0,2),
+        "╨": BoxChar(2,1,0,1), "╤": BoxChar(0,2,1,2), "╥": BoxChar(0,1,2,1),
+        "╙": BoxChar(2,1,0,0), "╘": BoxChar(1,2,0,0), "╒": BoxChar(0,2,1,0),
+        "╓": BoxChar(0,1,2,0), "╫": BoxChar(2,1,2,1), "╪": BoxChar(1,2,1,2),
+        "┘": BoxChar(1,0,0,1), "┌": BoxChar(0,1,1,0),
     }
-    ROTATION_MAP = {
-        '┼': ('┼', 1), '╫': ('╪', 1), '╪': ('╫', 1), '╬': ('╬', 1),
-        '─': ('│', 1), '│': ('─', 1), '═': ('║', 1), '║': ('═', 1),
-        '┌': ('┐', 3), '┐': ('┘', 3), '┘': ('└', 3), '└': ('┌', 3),
-        '╔': ('╗', 3), '╗': ('╝', 3), '╝': ('╚', 3), '╚': ('╔', 3),
-        '├': ('┬', 3), '┬': ('┤', 3), '┤': ('┴', 3), '┴': ('├', 3),
-        '╠': ('╦', 3), '╦': ('╣', 3), '╣': ('╩', 3), '╩': ('╠', 3),
-        '╞': ('╥', 3), '╥': ('╡', 3), '╡': ('╨', 3), '╨': ('╞', 3),
-        '╧': ('╟', 3), '╟': ('╤', 3), '╤': ('╢', 3), '╢': ('╧', 3),
-        '╓': ('╖', 3), '╖': ('╜', 3), '╜': ('╙', 3), '╙': ('╓', 3),
-        '╒': ('╕', 3), '╕': ('╛', 3), '╛': ('╘', 3), '╘': ('╒', 3),
-    }
+    reverse_map = {v: k for k, v in box_chars.items()}
 
-    def __init__(self, init_game):
-        self.init_grid, (self.start, self.finish) = self.__parse_grid(init_game)
-        self.grid_graph = self.__build_graph(self.init_grid)
+    @staticmethod
+    def rotate_box_char_cw(c): return PipesGame.BoxChar(c.W, c.N, c.E, c.S)
 
-    def __parse_grid(self, init_game):
-        grid, start, finish = defaultdict(str), None, None
-        start_marker, finish_marker = "▐▐ Start ▌▌", "▐▐ Finish ▌▌"
+    @staticmethod
+    def has_single_orientation(c): return c == PipesGame.rotate_box_char_cw(c)
 
-        for r, line in enumerate(init_game):
-            if start_marker in line:
-                start = (r, line.index(start_marker) - 2)
-            if finish_marker in line:
-                finish = (r, line.index(finish_marker) + len(finish_marker) + 1)
-            for c, char in enumerate(line):
-                grid[(r, c)] = char
+    @staticmethod
+    def edge_counts(c): return set(c)
 
-        start = min(grid) if start is None else start
-        finish = max(grid) if finish is None else finish
-        return grid, (start, finish)
+    @staticmethod
+    def rotations(c):
+        seen, r = set(), c
+        for i in range(4):
+            if r not in seen:
+                yield i, r
+                seen.add(r)
+            r = PipesGame.rotate_box_char_cw(r)
 
-    def __build_graph(self, grid):
-        graph = defaultdict(set)
-        (min_r, min_c), (max_r, max_c) = self.start, self.finish
-        for (r, c), val in grid.items():
-            if not (min_r <= r <= max_r and min_c <= c <= max_c):
-                continue
-            if val not in self.VALID_SYMBOLS:
-                continue
-            for dir_sym, (dr, dc) in self.DIRECTIONS.items():
-                nr, nc = r + dr, c + dc
-                if (
-                    min_r <= nr <= max_r and min_c <= nc <= max_c
-                    and grid.get((nr, nc)) in self.VALID_SYMBOLS
-                ):
-                    graph[(r, c)].add((dir_sym, (nr, nc)))
-        return graph
+    class EmptyCell:
+        def __init__(self, char): self.char = char
+        def __str__(self): return self.char
+        def box_char(self): return PipesGame.BoxChar(0, 0, 0, 0)
+        def is_locked(self): return True
 
-    def __print_screen(self, grid, control_type = None, pos=(0, 0)):
+    class PipeCell:
+        def __init__(self, bc, locked=False):
+            self._bc = bc
+            self._locked = locked or PipesGame.has_single_orientation(bc)
+        def __str__(self): return PipesGame.reverse_map[self._bc]
+        def box_char(self): return self._bc
+        def is_locked(self): return self._locked
+        def rotate_cw(self, count=1):
+            if self._locked: raise Exception("Can't rotate locked cell")
+            for _ in range(count): self._bc = PipesGame.rotate_box_char_cw(self._bc)
+            return count
+        def lock(self): self._locked = True
+
+    def __init__(self, input_data):
+        self.base_grid, self.bounds = self.__parse_grid(input_data)
+
+    def __parse_grid(self, data):
+        grid, start, end = defaultdict(str), None, None
+        start_mark, end_mark = "▐▐ Start ▌▌", "▐▐ Finish ▌▌"
+        for r, line in enumerate(data):
+            if start_mark in line: start = (r+1, line.index(start_mark) - 2)
+            if end_mark in line: end = (r-1, line.index(end_mark) + len(end_mark) + 1)
+            for c, ch in enumerate(line): grid[(r, c)] = ch
+        return grid, ((start or min(grid)), (end or max(grid)))
+
+    def __build_grid(self, dgrid):
+        s, e = self.bounds
+        g = {}
+        for pos, ch in dgrid.items():
+            if s <= pos <= e and ch in PipesGame.box_chars:
+                g[pos] = self.PipeCell(PipesGame.box_chars[ch], pos in (s, e))
+            else:
+                g[pos] = self.EmptyCell(ch)
+        return g
+
+    def __get_cell(self, y, x):
+        return self.cell_grid.get((y, x), self.EmptyCell(" "))
+
+    def __valid_rotations(self, c, n, e, s, w):
+        ns, es, ss, ws = map(PipesGame.edge_counts, \
+            (n.box_char(), e.box_char(), s.box_char(), w.box_char()))
+        if n.is_locked(): ns = {n.box_char().S}
+        if e.is_locked(): es = {e.box_char().W}
+        if s.is_locked(): ss = {s.box_char().N}
+        if w.is_locked(): ws = {w.box_char().E}
+        for count, rot in PipesGame.rotations(c.box_char()):
+            if rot.N in ns and rot.E in es and rot.S in ss and rot.W in ws:
+                yield count
+
+    def __lock_pass(self):
+        changed = 0
+        for (y, x), cell in self.cell_grid.items():
+            if isinstance(cell, self.PipeCell) and not cell.is_locked():
+                options = list(self.__valid_rotations(
+                    cell,
+                    self.__get_cell(y-1, x), self.__get_cell(y, x+1),
+                    self.__get_cell(y+1, x), self.__get_cell(y, x-1)))
+                if len(options) == 1:
+                    changed += cell.rotate_cw(options[0])
+                    cell.lock()
+                elif len(options) == 0:
+                    cell.lock()
+        return changed
+
+    def __rotate_pipe(self, pos, grid, rotations):
+        ROTATION_MAP = {
+            '┼': ('┼', 1), '╫': ('╪', 1), '╪': ('╫', 1), '╬': ('╬', 1),
+            '─': ('│', 1), '│': ('─', 1), '═': ('║', 1), '║': ('═', 1),
+            '┌': ('┐', 3), '┐': ('┘', 3), '┘': ('└', 3), '└': ('┌', 3),
+            '╔': ('╗', 3), '╗': ('╝', 3), '╝': ('╚', 3), '╚': ('╔', 3),
+            '├': ('┬', 3), '┬': ('┤', 3), '┤': ('┴', 3), '┴': ('├', 3),
+            '╠': ('╦', 3), '╦': ('╣', 3), '╣': ('╩', 3), '╩': ('╠', 3),
+            '╞': ('╥', 3), '╥': ('╡', 3), '╡': ('╨', 3), '╨': ('╞', 3),
+            '╧': ('╟', 3), '╟': ('╤', 3), '╤': ('╢', 3), '╢': ('╧', 3),
+            '╓': ('╖', 3), '╖': ('╜', 3), '╜': ('╙', 3), '╙': ('╓', 3),
+            '╒': ('╕', 3), '╕': ('╛', 3), '╛': ('╘', 3), '╘': ('╒', 3),
+        }
+        current_char = grid[pos]
+        new_char, mod = ROTATION_MAP.get(current_char, (current_char, 0))
+
+        # Update rotation count and character
+        rotations[pos] = (rotations.get(pos, 0) + 1) % (mod + 1)
+        grid[pos] = new_char
+
+        return rotations, grid
+
+    def print_screen(self, grid, control_type = None, pos = None):
 
         def print_grid(grid, pos):
             bold_map = {
@@ -109,7 +167,8 @@ class PipesGame:
             }
             (min_r, min_c), (max_r, max_c) = min(grid), max(grid)
             grid_repl = copy.deepcopy(grid)
-            grid_repl[pos] = bold_map.get(grid_repl[pos], '●')
+            if pos is not None:
+                grid_repl[pos] = bold_map.get(grid_repl[pos], '●')
             screen = [
                 ''.join(str(grid_repl.get((r, c), ' '))
                 for c in range(min_c, max_c + 1))
@@ -136,35 +195,19 @@ class PipesGame:
             print('\n'.join(full_screen))
             print('_' * len(full_screen[-1]))
 
-    def __rotate_pipe(self, pos, grid, rotations):
-
-        current_char = grid[pos]
-        new_char, mod = self.ROTATION_MAP.get(current_char, (current_char, 0))
-
-        # Update rotation count and character
-        rotations[pos] = (rotations.get(pos, 0) + 1) % (mod + 1)
-        grid[pos] = new_char
-
-        return rotations, grid
-
     def play_game(self, control_code = 3):
-        """
-        Control Key:
-            1: "Numbers"
-            2: "Arrows"
-            3: "Auto"
-        """
+        """ 1: "Numbers" | 2: "Arrows"| 3: "Auto" """
         control_type = self.REMOTE_CONTROL[control_code]
 
-        grid = self.init_grid.copy()
-        row, col = self.start
-        max_r, max_c = self.finish[0] + 1, self.finish[1] + 1
+        grid = self.base_grid.copy()
+        start, finish = self.bounds
+        row, col = start
+        max_r, max_c = finish[0] + 1, finish[1] + 1
         rotations_dict = defaultdict(int)
-        key_hist = []
 
         if control_type == "Numbers":
             while True:
-                self.__print_screen(grid, control_type, (row, col))
+                self.print_screen(grid, control_type, (row, col))
                 print("Current Rotation Count:", sum(rotations_dict.values()))
                 string = input('Enter (row, col) or "q" to QUIT: ')
                 if string == 'q':
@@ -172,155 +215,39 @@ class PipesGame:
                     break
                 try:
                     row, col = map(int, string.split(','))
-                    col = max(col, self.start[0])
+                    col = max(col, start[0])
                     rotations_dict, grid = self.__rotate_pipe((row, col), grid, rotations_dict)
                 except:
                     print('Invalid input. Try again.')
-
         elif control_type == "Arrows":
             while True:
-                self.__print_screen(grid, control_type, (row, col))
+                self.print_screen(grid, control_type, (row, col))
                 print("Current Rotation Count:", sum(rotations_dict.values()))
-                click.echo('Use arrow keys or space to rotate, "q" to QUIT:')
+                click.echo("\nUse WASD or arrow keys to move, space to rotate, enter to lock, 'q' to QUIT:")
                 key = click.getchar()
-                key_hist.append(key)
                 if key == 'q':
                     min_rots = sum(rotations_dict.values())
-                    # print(key_hist)
                     break
-                elif key == '\xe0H': row = (row - 1) % max_r
-                elif key == '\xe0P': row = (row + 1) % max_r
-                elif key == '\xe0K': col = (col - 1) % max_c
-                elif key == '\xe0M': col = (col + 1) % max_c
+                elif key in ["w", "\xe0H"]: row = (row - 1) % max_r
+                elif key in ["s", "\xe0P"]: row = (row + 1) % max_r
+                elif key in ["a", "\xe0K"]: col = (col - 1) % max_c
+                elif key in ["d", "\xe0M"]: col = (col + 1) % max_c
                 elif key == ' ':  # space
                     rotations_dict, grid = self.__rotate_pipe((row, col), grid, rotations_dict)
                 else:
                     print(f'Key {key} not recognized')
-
         elif control_type == "Auto":
-            min_rots = self.auto_play(True)
+            min_rots = 0
+            self.cell_grid = self.__build_grid(grid)
+            while (delta := self.__lock_pass()):
+                min_rots += delta
+            # self.print_screen(self.cell_grid)
 
         return min_rots
 
-    def auto_play(self, visualization=False):
-        grid = copy.deepcopy(self.init_grid)
-        rotations = defaultdict(int)
-        finalized = {self.start, self.finish}
-        total_rotations = 0
+game = PipesGame(input_data)
+rotated = game.play_game(3)
 
-        def valid_rotations(pos, g, finalized_set):
-            r, c = pos
-            original = g[pos]
-            possible = []
-            neighbors = self.grid_graph[pos]
-            test_symbol = original
-            for rot in range(4):
-                connections = self.PIPE_CONNECTIONS.get(test_symbol, set())
-                ok = True
-                for dir_name in connections:
-                    dr, dc = self.DIRECTIONS[dir_name]
-                    neighbor = (r + dr, c + dc)
-                    neighbor_char = g.get(neighbor)
-                    if neighbor_char not in self.VALID_SYMBOLS:
-                        ok = False
-                        break
-                    neighbor_conns = self.PIPE_CONNECTIONS.get(neighbor_char, set())
-                    if neighbor in finalized_set:
-                        if self.REVERSE_DIR[dir_name] not in neighbor_conns:
-                            ok = False
-                            break
-                    else:
-                        temp = neighbor_char
-                        match_found = False
-                        for _ in range(4):
-                            temp_conns = self.PIPE_CONNECTIONS.get(temp, set())
-                            if self.REVERSE_DIR[dir_name] in temp_conns:
-                                match_found = True
-                                break
-                            temp, _ = self.ROTATION_MAP.get(temp, (temp, 0))
-                        if not match_found:
-                            ok = False
-                            break
-                if ok:
-                    possible.append(rot)
-                test_symbol, _ = self.ROTATION_MAP.get(test_symbol, (test_symbol, 0))
-            return possible
-
-        def solve(g, f, rot, depth=0):
-            made_progress = True
-            while made_progress:
-                made_progress = False
-                for pos in list(self.grid_graph.keys()):
-                    if pos in f:
-                        continue
-                    options = valid_rotations(pos, g, f)
-                    if len(options) == 1:
-                        r = options[0]
-                        for _ in range(r):
-                            rot, g = self.__rotate_pipe(pos, g, rot)
-                        f.add(pos)
-                        if visualization:
-                            print(f"Finalized pipe at {pos} with {r} rotation(s). Total rotations: {sum(rot.values())}")
-                            self.__print_screen(g, control_type=None, pos=pos)
-                            time.sleep(0.5)
-                        made_progress = True
-            # Check if complete
-            if len(f) == len(self.grid_graph):
-                return g, rot
-            # Backtracking step
-            nonfinal = [pos for pos in self.grid_graph if pos not in f]
-            nonfinal.sort(key=lambda p: len(valid_rotations(p, g, f)))
-            for pos in nonfinal:
-                options = valid_rotations(pos, g, f)
-                if len(options) <= 1:
-                    continue  # Already handled or unsolvable
-                for r in options:
-                    new_grid = copy.deepcopy(g)
-                    new_rot = copy.deepcopy(rot)
-                    new_final = f.copy()
-                    for _ in range(r):
-                        new_rot, new_grid = self.__rotate_pipe(pos, new_grid, new_rot)
-                    new_final.add(pos)
-                    result = solve(new_grid, new_final, new_rot, depth + 1)
-                    if result:
-                        return result
-            return None
-
-        result = solve(grid, finalized, rotations)
-        if result:
-            final_grid, final_rotations = result
-            if visualization:
-                print("Auto-play complete. Total rotations:", sum(final_rotations.values()))
-                self.__print_screen(final_grid)
-
-            return sum(final_rotations.values())
-        else:
-            print("Auto-play failed to solve the puzzle.")
-            return None
-
-
-pipes = PipesGame(input_data)
-
-rotations = pipes.play_game(3)
-print("Rotations Required:", rotations)
+print("Minimum Rotations Required:", rotated)
 
 print(f"Execution Time = {time.time() - start_time:.5f}s")
-
-# └──┐     ┘┬┐
-# └──┘     ─││
-# └─│││──┘τ┘┘│
-# ■┌╞──│─┐  ┘┐
-#  ─═╔╔┌│─│─┴┐
-#  │═╗╠│½    │
-# ┌┘╗║╝─°    │
-# └──││┐     │
-
-# └──┐     ┌┬┐
-# ┌──┘     │││
-# └──────┐τ└┘│
-# ■┌╥────┘  ┌┘
-#  │║╔╗┌────┴┐
-#  │║╚╣│½    │
-# ┌┘╚═╝│°    │
-# └────┘     │
-
