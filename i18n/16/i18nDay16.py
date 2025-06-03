@@ -241,7 +241,7 @@ class PipesGame:
             self.cell_grid = self.__build_grid(grid)
             while (delta := self.__lock_pass()):
                 min_rots += delta
-            # self.print_screen(self.cell_grid)
+            self.print_screen(self.cell_grid)
 
         return min_rots
 
