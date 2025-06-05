@@ -48,9 +48,13 @@ class ByteBeard:
     def decode_map(self, map_section, visualization=True, error_handling='replace'):
         decoded_map = []
         for line in map_section:
-            byte_data = bytes.fromhex(line)
-            decoded_line = byte_data.decode('utf-8', errors=error_handling)
+            try:
+                byte_data = binascii.unhexlify(line)
+                decoded_line = byte_data.decode('utf-8', errors=error_handling)
+            except (binascii.Error, UnicodeDecodeError) as e:
+                decoded_line = f"[Decode error: {e}]"
             decoded_map.append(decoded_line)
+
         if visualization:
             print('\n'.join(decoded_map))
         return decoded_map
@@ -113,11 +117,13 @@ class ByteBeard:
 
         if map_size["T"] != map_size["B"] or map_size["R"] != map_size["L"]:
             raise ValueError("Edge Lengths do not match.")
-        width, height = (map_size["B"] // self.BITS_IN_BYTES), map_size["R"]
-        map_props = {}
-        map_props["W"], map_props["H"] = width, height
-        map_props["T_L"], map_props["T_R"] = (0, 0), (0, width - 1)
-        map_props["B_L"], map_props["B_R"] = (height, 0), (height, width - 1)
+        w, h = (map_size["B"] // self.BITS_IN_BYTES), map_size["R"]
+        map_props = {
+            "W": w, "H": h,
+            "T_L": (0, 0), "T_R": (0, w - 1),
+            "B_L": (h - 1, 0), "B_R": (h - 1, w - 1),
+        }
+
         return edges_dict, map_props
 
     def __add_grid_to_map(self, grid_no, start_pos):
@@ -143,7 +149,7 @@ class ByteBeard:
             grid_no = self.edges_dict[corner]
             grid_len = self.puzzle_sizes[grid_no]
 
-            row_no = row_no if corner[0] == "T" else (row_no - grid_len)
+            row_no = row_no if corner[0] == "T" else (row_no - grid_len + 1)
             self.full_map = self.__add_grid_to_map(grid_no, (row_no, col_no))
 
         return self.full_map
@@ -156,18 +162,31 @@ class ByteBeard:
             for col_no, cell in enumerate(row_data):
                 if cell == "╳":
                     position = {"x":col_no, "y":row_no}
+        print("Unused grids", len(self.unused_grids))
+        print("Full Map Size:", len(self.full_map))
         return position
 
     ## Solving the Puzzle -----------------------------------------------------
     @staticmethod
     def find_complete_utf8(hex_str: str, debug: bool = False) -> bool:
-        # Convert hex string to raw bytes
         raw_bytes = binascii.unhexlify(hex_str)
+
         length = len(raw_bytes)
         i = 0
 
         while i < length:
             byte = raw_bytes[i]
+
+            # Check for continuation byte in first position (allowed if at start)
+            if byte >> 6 == 0b10:
+                if i == 0:
+                    # Skip initial dangling continuation byte
+                    i += 1
+                    continue
+                else:
+                    if debug:
+                        print(f"Unexpected continuation byte at position {i}: {byte:#x}")
+                    return False
 
             # Determine expected length of UTF-8 sequence
             if byte >> 7 == 0b0:
@@ -183,10 +202,10 @@ class ByteBeard:
                     print(f"Invalid UTF-8 leading byte at position {i}: {byte:#x}")
                 return False
 
-            # If the sequence doesn't fit in remaining bytes
+            # If sequence doesn't fully fit and it's not at end, it's invalid
             if i + expected > length:
-                # Allow if this is the final sequence
-                if i == length - 1 or i == length - 2 or i == length - 3:
+                if i == 0 or i + expected - 1 >= length:
+                    # Incomplete sequence is allowed at start or end
                     break
                 else:
                     if debug:
@@ -207,31 +226,51 @@ class ByteBeard:
             print("No incomplete UTF-8 sequences in the middle.")
         return True
 
-    def build_line(self, line_history, new_grid, line_no):
-        return ''.join(self.puzzle_dict[(grid, line_no)] for grid in line_history + [new_grid])
-
-    def __validate_matches(self, line_history, possible_choices):
+    def __validate_matches(self, map_pos, possible_choices):
         valid_grids = set()
-        adj_grid = line_history[-1]
-        adj_grid_len = self.puzzle_sizes[adj_grid]
-
-        for possible_grid in possible_choices:
-            possible_grid_len = self.puzzle_sizes[possible_grid]
-            chosen_len = min(adj_grid_len, possible_grid_len)
+        row, col = map_pos
+        # print(map_pos)
+        for test_grid_no in possible_choices:
+            test_grid_len = self.puzzle_sizes[test_grid_no]
             valid_choice = True
+            bottom_row = test_grid_no in self.edges_dict["B"]
+            # print(test_grid_no, test_grid_len, bottom_row)
+
+            # Go left until you find a missing piece
+            left_cells = []
+            c = col - 1
+            while self.full_map.get((row, c), None) is not None:
+                left_cells.insert(0, self.full_map[(row, c)])  # prepend to preserve left-to-right
+                c -= 1
+
+            # Go right until you find a missing piece (excluding current test_grid)
+            right_cells = []
+            c = col + 1
+            while self.full_map.get((row, c), None) is not None:
+                right_cells.append(self.full_map[(row, c)])
+                c += 1
+
+            grid_row = (test_grid_len - 1) if bottom_row else row
+
+            # Compose full horizontal row including the test grid
+            full_row = left_cells + [(test_grid_no, grid_row)] + right_cells
+            # print(full_row)
+
+            chosen_len = min(self.puzzle_sizes[g[0]] for g in full_row)
             for line_no in range(chosen_len):
-                new_line = ""
-                for line_pos in line_history:
-                    new_line += self.puzzle_dict[(line_pos, line_no)]
+                row_line = ""
+                for g, _ in full_row:
+                    g_len = self.puzzle_sizes[g]
+                    g_line = (g_len - line_no - 1) if bottom_row else line_no
+                    # print(g, g_line)
+                    row_line += self.puzzle_dict[(g, g_line)]
 
-                new_line += self.puzzle_dict[(possible_grid, line_no)]
-
-                validity_check = self.find_complete_utf8(new_line)
-                if not validity_check:
+                if not self.find_complete_utf8(row_line):
                     valid_choice = False
                     break
+
             if valid_choice:
-                valid_grids.add(possible_grid)
+                valid_grids.add(test_grid_no)
 
         return list(valid_grids)
 
@@ -239,47 +278,46 @@ class ByteBeard:
         possible_grids = self.edges_dict[vertice_name]
         chosen_grid = self.edges_dict[f"{vertice_name}_L"]
         map_pos = self.map_props[f"{vertice_name}_L"]
-        end_row = self.map_props[f"{vertice_name}_R"]
+        end_pos = self.map_props[f"{vertice_name}_R"]
+        # print(map_pos, end_pos, len(possible_grids))
         count = 0
-        line_history = [chosen_grid]
         while True:
             new_map_pos = map_pos[0], map_pos[1] + 1
-            if new_map_pos == end_row:
+            if new_map_pos == end_pos:
                 break
             count += 1
-            selected_grids = self.__validate_matches(line_history, possible_grids)
+            selected_grids = self.__validate_matches(new_map_pos, possible_grids)
+
             if len(selected_grids) == 1:
                 chosen_grid = selected_grids[0]
-                self.__add_grid_to_map(chosen_grid, new_map_pos)
-                line_history.append(chosen_grid)
+                add_map_pos = new_map_pos
+                if chosen_grid in self.edges_dict["B"]:
+                    add_map_pos = (new_map_pos[0] - self.puzzle_sizes[chosen_grid]+1, new_map_pos[1])
+                    # new_map_pos = add_map_pos
+                self.__add_grid_to_map(chosen_grid, add_map_pos)
                 possible_grids.remove(chosen_grid)
                 map_pos = new_map_pos
-            if count >= 8:
-                break
+
         return selected_grids
 
     def build_map(self, print_map = True):
         self.full_map = self.__build_init_map()
         print(set(self.puzzle_sizes.values()))
 
-        # puzzle_moves = [(0, (0, 1)), (3, (4, 1)), (2, (8, 2)), (6, (16, 1))]
+        self.__complete_top_bottom("T")
+        self.__complete_top_bottom("B")
+        print(self.edges_dict["R"], self.edges_dict["L"])
         # puzzle_moves = []
+        # puzzle_moves = [(3, (4, 1)), (2, (8, 2)))]
         # for grid_no, edge_pos in puzzle_moves:
         #     self.full_map = self.__add_grid_to_map(grid_no, edge_pos)
 
-        top_row = self.__complete_top_bottom("T")
-        # bottom_row = self.__create_row("B")
         edge_secs = [item for x in self.edges_dict.values() for item in (x if isinstance(x, list) else [x])]
         mid_grids = list(self.puzzle_pieces.keys() - (edge_secs))
         formed_map = self.create_hex_map(self.full_map, False)
         treasure_map = self.decode_map(formed_map, True)
 
-        print("Unused grids", len(self.unused_grids))
-        print("Full Map Size:", len(self.full_map))
-        # for edge in "TBRL":
-        #     print(edge, self.edges_dict[edge])
         return treasure_map
-
 
 beard = ByteBeard(input_data)
 
@@ -312,3 +350,4 @@ print(f"Execution Time = {time.time() - start_time:.5f}s")
 # |≋ñ¯¯¯≋≋≋~~~𑀍ñ~ñ≋~≋~ñ-≋|
 # ║ñ~~~𑀍~≋ñ~~≋ññ≋≋ñññ~≋~~║
 # ╚-═-═-═-═-═-═-═--═-═-═-╝
+
