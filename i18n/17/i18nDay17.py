@@ -23,6 +23,8 @@ with open(D17_file_path) as file:
     input_data = file.read().strip().split('\n\n')
 
 class ByteBeard:
+    DIRECTIONS = {'>': (0, 1), 'v': (1, 0), '^': (-1, 0), '<': (0, -1)}
+    EDGE_MOVE = {"T":(">", "v"), "B":(">", "^"), "R":("v", "<"), "L":("v", ">")}
     BITS_IN_BYTES = 8
     SYMBOLS = "├─┬┴┼┤│║╠╦╪╬╣╞╤╩╡╟╥╢╓╫╖╚═╝╙╨╜╘╧╛└┘╒╕┌┐╔╗"
 
@@ -72,6 +74,26 @@ class ByteBeard:
         if visualization:
             print('\n'.join(printed_map))
         return printed_map
+
+    def print_map_grid(self):
+        grid_map = self.full_map
+        # Determine grid dimensions
+        def format_cell(val):
+            if val is None:
+                return "________"
+            return f"({val[0]:03},{val[1]:02})"
+
+        # Grid dimensions
+        max_row = max(r for r, _ in grid_map)
+        max_col = max(c for _, c in grid_map)
+
+        # Print the grid
+        for row in range(max_row + 1):
+            line = []
+            for col in range(max_col + 1):
+                cell = format_cell(grid_map.get((row, col)))
+                line.append(cell)
+            print(" ".join(line))
 
     def __build_puzzle_dict(self, encoded_map):
         for grid_no, section in enumerate(encoded_map):
@@ -129,10 +151,12 @@ class ByteBeard:
     def __add_grid_to_map(self, grid_no, start_pos):
         row_no, col_no = start_pos
         grid_len = self.puzzle_sizes[grid_no]
-
+        self.piece_edges[grid_no]["S"] = (row_no, col_no)
         for line_no in range(grid_len):
             self.full_map[(row_no, col_no)] = (grid_no, line_no)
+            self.empty_spaces.remove((row_no, col_no))
             row_no += 1
+        self.piece_edges[grid_no]["E"] = (row_no -1, col_no)
         self.unused_grids.remove(grid_no)
         return self.full_map
 
@@ -144,6 +168,8 @@ class ByteBeard:
             for row in range(self.map_props["H"])
             for col in range(self.map_props["W"])
         }
+        self.empty_spaces = copy.deepcopy(set(self.full_map.keys()))
+        self.piece_edges = defaultdict(dict)
         for corner in ["T_L", "T_R", "B_L", "B_R"]:
             row_no, col_no = self.map_props[corner]
             grid_no = self.edges_dict[corner]
@@ -157,18 +183,17 @@ class ByteBeard:
     def find_coordinates(self):
         position = {"x": 0, "y": 0}
         treasure_map = self.build_map()
-        treasure_map = []
+        # treasure_map = []
         for row_no, row_data in enumerate(treasure_map):
             for col_no, cell in enumerate(row_data):
                 if cell == "╳":
                     position = {"x":col_no, "y":row_no}
-        print("Unused grids", len(self.unused_grids))
-        print("Full Map Size:", len(self.full_map))
+        # print("Unused grids", len(self.unused_grids), "| Full Map Size:", len(self.full_map))
         return position
 
     ## Solving the Puzzle -----------------------------------------------------
     @staticmethod
-    def find_complete_utf8(hex_str: str, debug: bool = False) -> bool:
+    def __find_complete_utf8(hex_str: str, debug: bool = False) -> bool:
         raw_bytes = binascii.unhexlify(hex_str)
 
         length = len(raw_bytes)
@@ -226,97 +251,160 @@ class ByteBeard:
             print("No incomplete UTF-8 sequences in the middle.")
         return True
 
-    def __validate_matches(self, map_pos, possible_choices):
+    def __validate_matches(self, map_pos, possible_choices, block_moves=(">", "v"), debug=False, start_grid=None):
         valid_grids = set()
         row, col = map_pos
-        # print(map_pos)
+        count_upward = block_moves[1] == "^"
+
         for test_grid_no in possible_choices:
             test_grid_len = self.puzzle_sizes[test_grid_no]
-            valid_choice = True
-            bottom_row = test_grid_no in self.edges_dict["B"]
-            # print(test_grid_no, test_grid_len, bottom_row)
+            is_valid = True
 
-            # Go left until you find a missing piece
+            if debug:
+                print(f"\nTesting grid {test_grid_no} at position {map_pos} (upward: {count_upward})")
+
+            # Collect left neighbors
             left_cells = []
             c = col - 1
-            while self.full_map.get((row, c), None) is not None:
-                left_cells.insert(0, self.full_map[(row, c)])  # prepend to preserve left-to-right
+            while (cell := self.full_map.get((row, c))) is not None:
+                left_cells.insert(0, cell)
                 c -= 1
 
-            # Go right until you find a missing piece (excluding current test_grid)
+            # Collect right neighbors
             right_cells = []
             c = col + 1
-            while self.full_map.get((row, c), None) is not None:
-                right_cells.append(self.full_map[(row, c)])
+            while (cell := self.full_map.get((row, c))) is not None:
+                right_cells.append(cell)
                 c += 1
 
-            grid_row = (test_grid_len - 1) if bottom_row else row
-
-            # Compose full horizontal row including the test grid
+            # Determine starting row index for the test grid
+            grid_row = start_grid if start_grid is not None else (test_grid_len - 1 if count_upward else row)
             full_row = left_cells + [(test_grid_no, grid_row)] + right_cells
-            # print(full_row)
 
-            chosen_len = min(self.puzzle_sizes[g[0]] for g in full_row)
-            for line_no in range(chosen_len):
-                row_line = ""
-                for g, _ in full_row:
-                    g_len = self.puzzle_sizes[g]
-                    g_line = (g_len - line_no - 1) if bottom_row else line_no
-                    # print(g, g_line)
-                    row_line += self.puzzle_dict[(g, g_line)]
+            if debug:
+                print("→ Full row layout:", full_row)
 
-                if not self.find_complete_utf8(row_line):
-                    valid_choice = False
+            min_lines = min(self.puzzle_sizes[g[0]] for g in full_row)
+
+            for line_no in range(min_lines):
+                row_chars = []
+                row_coords = []
+                for g_no, g_row in full_row:
+                    g_len = self.puzzle_sizes[g_no]
+                    if count_upward:
+                        g_line = g_len - line_no - 1
+                    elif start_grid is not None:
+                        g_line = (g_row + line_no) if g_no != test_grid_no else line_no
+                    else:
+                        g_line = g_row + line_no
+                    pos = (g_no, g_line)
+
+                    row_coords.append(pos)
+                    row_chars.append(self.puzzle_dict[pos])
+
+                row_chars = [self.puzzle_dict[pos] for pos in row_coords]
+
+                combined_line = ''.join(row_chars)
+
+                if debug:
+                    self.decode_map([combined_line])
+
+                if not self.__find_complete_utf8(combined_line):
+                    is_valid = False
                     break
-
-            if valid_choice:
+            if is_valid:
                 valid_grids.add(test_grid_no)
 
         return list(valid_grids)
 
-    def __complete_top_bottom(self, vertice_name):
-        possible_grids = self.edges_dict[vertice_name]
-        chosen_grid = self.edges_dict[f"{vertice_name}_L"]
-        map_pos = self.map_props[f"{vertice_name}_L"]
-        end_pos = self.map_props[f"{vertice_name}_R"]
-        # print(map_pos, end_pos, len(possible_grids))
-        count = 0
-        while True:
-            new_map_pos = map_pos[0], map_pos[1] + 1
-            if new_map_pos == end_pos:
+    def __complete_vertices(self, label, axis="horizontal", debug=False):
+        pieces_remaining = self.edges_dict[label]
+        movement = self.EDGE_MOVE[label]
+        direction = self.DIRECTIONS[movement[0]]
+        if axis == "vertical":
+            top_piece = self.edges_dict[f"T_{label}"]
+            current_pos = self.piece_edges[top_piece]["E"]
+            target_pos = self.map_props[f"B_{label}"]
+            max_steps = 10
+        elif axis == "horizontal":
+            current_pos = self.map_props[f"{label}_L"]
+            target_pos = self.map_props[f"{label}_R"]
+            max_steps = 50  # safety limit
+        steps = 0
+        while current_pos != target_pos and steps < max_steps:
+            next_pos = tuple(c + d for c, d in zip(current_pos, direction))
+            match_options = self.__validate_matches(
+                next_pos, pieces_remaining,  block_moves=movement,
+                debug=debug if axis != "horizontal" else False,
+                start_grid=0 if axis != "horizontal" else None
+            )
+            if len(match_options) == 1:
+                g = match_options[0]
+                if axis == "horizontal":
+                    # For vertical chains, adjust offset for bottom pieces
+                    offset = (next_pos[0] - self.puzzle_sizes[g] + 1, next_pos[1]) \
+                            if g in self.edges_dict["B"] else next_pos
+                else:
+                    offset = next_pos
+                self.__add_grid_to_map(g, offset)
+                pieces_remaining.remove(g)
+                if axis == "vertical":
+                    current_pos = self.piece_edges[g]["E"]
+                else:
+                    current_pos = next_pos
+            else:
                 break
-            count += 1
-            selected_grids = self.__validate_matches(new_map_pos, possible_grids)
+            steps += 1
 
-            if len(selected_grids) == 1:
-                chosen_grid = selected_grids[0]
-                add_map_pos = new_map_pos
-                if chosen_grid in self.edges_dict["B"]:
-                    add_map_pos = (new_map_pos[0] - self.puzzle_sizes[chosen_grid]+1, new_map_pos[1])
-                    # new_map_pos = add_map_pos
-                self.__add_grid_to_map(chosen_grid, add_map_pos)
-                possible_grids.remove(chosen_grid)
-                map_pos = new_map_pos
-
-        return selected_grids
-
+    def __complete_map(self, rem_grids, debug=False):
+        steps = 0
+        grid_choices = rem_grids.copy()
+        empty_positions = self.empty_spaces.copy()
+        while True:
+            init_pos = min(empty_positions)
+            # print(steps, init_pos)
+            match_options = self.__validate_matches(init_pos, grid_choices, debug = debug, start_grid=0)
+            # print(init_pos, match_options)
+            # if len(match_options) != 1:
+            #     print(init_pos, match_options)
+            #     print(len(grid_choices), len(empty_positions))
+            if len(match_options) == 1:
+                g = match_options[0]
+                self.__add_grid_to_map(g, init_pos)
+                empty_positions = self.empty_spaces.copy()
+                grid_choices = self.unused_grids.copy()
+                # print(match_options, len(grid_choices), len(empty_positions))
+            else:
+                break
+            steps += 1
+            if steps >= 50:
+                break
+            if len(grid_choices) == 0:
+                break
+        return
     def build_map(self, print_map = True):
         self.full_map = self.__build_init_map()
-        print(set(self.puzzle_sizes.values()))
+        # print(f"Puzzle Sizes: {set(self.puzzle_sizes.values())}|Left Edge: {self.edges_dict["L"]}|Right Edge: {self.edges_dict["R"]}")
+        self.EDGES_MAP = copy.deepcopy(self.edges_dict)
 
-        self.__complete_top_bottom("T")
-        self.__complete_top_bottom("B")
-        print(self.edges_dict["R"], self.edges_dict["L"])
-        # puzzle_moves = []
-        # puzzle_moves = [(3, (4, 1)), (2, (8, 2)))]
+        self.__complete_vertices("T", axis="horizontal")
+        self.__complete_vertices("B", axis="horizontal")
+        self.__complete_vertices("L", axis="vertical")
+        # right_edge = [(62, (8, 31)), (132, (32, 31)), (25, (48, 31)), (27, (72, 31))]
+        # # right_edge = [(62, (8, 31)), (132, (56, 31)), (25, (32, 31)), (27, (72, 31))]
+        # puzzle_moves = right_edge
         # for grid_no, edge_pos in puzzle_moves:
         #     self.full_map = self.__add_grid_to_map(grid_no, edge_pos)
+        # self.__complete_vertices("R", axis="vertical")
+        rem_grids = copy.deepcopy(self.unused_grids)
+        self.__complete_map(rem_grids, False)
 
-        edge_secs = [item for x in self.edges_dict.values() for item in (x if isinstance(x, list) else [x])]
-        mid_grids = list(self.puzzle_pieces.keys() - (edge_secs))
-        formed_map = self.create_hex_map(self.full_map, False)
-        treasure_map = self.decode_map(formed_map, True)
+        formed_map = self.create_hex_map(self.full_map)
+        treasure_map = self.decode_map(formed_map, False)
 
+        # self.print_map_grid()
+        # for line in treasure_map:
+        #     print(line)
         return treasure_map
 
 beard = ByteBeard(input_data)
