@@ -20,11 +20,6 @@ D17_file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), D17_fil
 with open(D17_file_path) as file:
     input_data = file.read().strip().split('\n\n')
 
-import binascii
-import os
-from collections import defaultdict
-from PIL import Image, ImageDraw, ImageFont
-
 class ByteBeard:
     DIRECTIONS = {'>': (0, 1), 'v': (1, 0), '^': (-1, 0), '<': (0, -1)}
     BITS_IN_BYTES = 8
