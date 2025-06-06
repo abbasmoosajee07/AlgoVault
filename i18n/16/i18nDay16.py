@@ -250,4 +250,4 @@ rotated = game.play_game(3)
 
 print("Minimum Rotations Required:", rotated)
 
-print(f"Execution Time = {time.time() - start_time:.5f}s")
+# print(f"Execution Time = {time.time() - start_time:.5f}s")

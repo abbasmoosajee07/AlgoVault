@@ -8,7 +8,7 @@ import psutil
 def get_file_line_count(file_path):
     """Get the number of lines in a script file."""
     try:
-        with open(file_path, "r") as file:
+        with open(file_path, "r", encoding="utf-8") as file:
             return len(file.readlines())
     except Exception as e:
         print(f"Error reading {file_path}: {e}")
