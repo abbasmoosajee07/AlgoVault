@@ -21,4 +21,8 @@ This repository contains coding solutions for the i18n puzzles.
 15. **Puzzle 15- 24/5 support**: Create a schedule to map global office schedules and customer requests, and calculate required overtime.
 16. **Puzzle 16- 8-bit unboxing**: Play a modern version of the PIPES game from the original DOS system, connecting pipes and fixing all leaks with the minimum number of rotations.
 17. **Puzzle 17- X marks the spot**: Decode a treasure map to find the coordinates of X. Essentially approached it as a puzzle, main assumption based on there being a single match for each section. *Favourite Puzzle tho*
+18. **Puzzle 18- Rex To Lynx**: Reading and evaluating equations, while checking for BiDi Characters.
 ---
+
+
+Puzzles and puzzle inputs were created by Martijn van Iersel / i18n-puzzles.com. Redistributed with permission according to CC BY 4.0
