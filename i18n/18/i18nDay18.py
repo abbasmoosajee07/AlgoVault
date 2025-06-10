@@ -7,14 +7,11 @@ Brief: [Rex To Lynx]
 
 #!/usr/bin/env python3
 
-import os, re, copy, time
-import ast, operator
-import numpy as np
-import pandas as pd
+import os, re, copy, time, ast, operator
 start_time = time.time()
 
 # Load the input data from the specified file path
-D18_file = "Day18_input1.txt"
+D18_file = "Day18_input.txt"
 D18_file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), D18_file)
 
 # Read and sort input data into a grid
@@ -22,19 +19,14 @@ with open(D18_file_path, encoding="utf-8") as file:
     input_data = file.read().strip().split('\n')
 
 class Scam_Checker:
-    BIDI_CONTROLS = {
-        '\u200e': ("LRM", '⇉'), '\u200f': ("RLM", '⇇'),
-        '\u202a': ("LRE", '→'), '\u202b': ("RLE", '←'),
-        '\u202d': ("LRO", '}'), '\u202e': ("RLO", '{'),
-        '\u2066': ("LRI", '>'), '\u2067': ("RLI", '<'),
-        '\u2069': ("PDI", '^'), '\u202c': ("PDF", '◌'),
-        '\u2068': ("FSI", '⋄'),
-    }
-    REVERSE_DICT = {'(':')', ')':'('}
+    BIDI_CONTROLS = {'\u2067': '<', '\u2066': '>', '\u2069': '^'}
+    REVERSE_DICT  = {'(':')', ')':'(', '[': ']', ']': '[', '{': '}', '}': '{'}
 
-    @staticmethod
-    def convert_eq_dict(equation, shift = 0):
-        return {char_idx + shift: char for char_idx, char in enumerate(equation)}
+    def parse_equation(self, init_eq):
+        token_pattern = re.compile(
+            fr'([{re.escape("".join(self.BIDI_CONTROLS))}])|(\d+)|([()+\-*/])'
+        )
+        return [m.group(0) for part in init_eq.split() for m in token_pattern.finditer(part)]
 
     @staticmethod
     def evaluate_sum(equation: str):
@@ -43,7 +35,6 @@ class Scam_Checker:
             ast.Mult: operator.mul, ast.Div: operator.truediv,
             ast.USub: operator.neg,
         }
-
         def eval_node(node):
             if isinstance(node, ast.BinOp):
                 return ops[type(node.op)](eval_node(node.left), eval_node(node.right))
@@ -53,46 +44,31 @@ class Scam_Checker:
                 return node.value
             else:
                 raise ValueError("Unsupported expression")
-
         try:
             tree = ast.parse(equation, mode='eval')
-            result = eval_node(tree.body)
-            return int(result)
+            return round(eval_node(tree.body))
         except Exception as e:
             print(f"Error: {e}")
             return None
 
-    def project_rex(self, og_bill: str = ""):
+    def __strip_eq(self, full_eq):
         stripped_text = []
-        for c in og_bill:
+        for c in full_eq:
             if c not in self.BIDI_CONTROLS.keys():
                 stripped_text.append(c)
-        strip_bill = ''.join(stripped_text)
+        return ''.join(stripped_text)
+
+    def project_rex(self, og_bill):
+        strip_bill = self.__strip_eq(og_bill)
         bill_value = self.evaluate_sum(strip_bill)
-        return bill_value
+        return bill_value, strip_bill
 
-    def build_equation(self, use_eq):
-        return ''.join(self.BIDI_CONTROLS.get(c, (None, c))[1] for c in use_eq.values())
+    def __equation_str(self, use_eq):
+        return ''.join(self.BIDI_CONTROLS.get(c, c) for c, _ in use_eq.values())
 
-    def identify_embed_levels(self, eq_dict):
-        embed_level, embed_dict = (0, {})
-
-        for char_idx, char in eq_dict.items():
-            bidi_type, char = self.BIDI_CONTROLS.get(char, (None, char))
-            # Assign embedding level based on whether it's a digit and current embedding level is odd
-            embed_dict[char_idx] = embed_level + 1 \
-                if (char.isdigit() and embed_level % 2 == 1) else embed_level
-            # Update embedding level based on BIDI control characters
-            if bidi_type in {"RLI", "LRI"}:
-                embed_level += 1
-            elif bidi_type == "PDI":
-                embed_level = max(embed_level - 1, 0)
-                embed_dict[char_idx] = embed_level  # PDI overrides previous level assignment
-        return embed_dict
-
-    def identify_stretch(self, embed_dict, for_embed):
-        max_idx = sorted(idx for idx, level in embed_dict.items() if level == for_embed)
+    def __identify_stretch(self, eq_dict, for_embed):
         streaks, streak = ([], [])
+        max_idx = sorted(idx for idx, (_, level) in eq_dict.items() if level == for_embed)
         for idx in max_idx:
             if streak and idx != streak[-1] + 1:
                 streaks.append(streak)
@@ -102,80 +78,68 @@ class Scam_Checker:
             streaks.append(streak)
         return max(streaks, key=len)
 
-    def __flip_equation(self, eq_dict, embed_dict):
-        max_embed = max(embed_dict.values())
-        stretch = self.identify_stretch(embed_dict, max_embed)
-        # print(max_embed, stretch)
+    def __reverse_string(self, eq_dict):
         rev_eq = copy.deepcopy(eq_dict)
-        rev_embed = copy.deepcopy(embed_dict)
-        for c1, c2 in zip(stretch, stretch[::-1]):
-            rev_char = self.REVERSE_DICT.get(eq_dict[c2], eq_dict[c2])
-            rev_eq[c1] = rev_char
-            # rev_embed[c1] -= 1
-        for char_idx, idx_embed in embed_dict.items():
-            if idx_embed == max_embed:
-                rev_embed[char_idx] -= 1
-        return rev_eq, rev_embed
+        max_embed = max(emb for _, emb in eq_dict.values())
+        stretch = self.__identify_stretch(eq_dict, max_embed)
+        if len(stretch) <= 1:
+            rev_eq[stretch[0]][1] -=1
+        else:
+            for c1, c2 in zip(stretch, stretch[::-1]):
+                init_char, base_embed = eq_dict[c2]
+                rev_char = self.REVERSE_DICT.get(init_char, init_char)
+                rev_eq[c1] = [rev_char, base_embed - 1]
+        return rev_eq, stretch
 
-    def project_lynx(self, equation, visualize: bool = False):
-        # Input line short : 73 + (3 * (1 * ⏴(((3 + (6 - 2)) * 6) + ⏵((52 * 6) / ⏴(13 - (7 - 2))⏶)⏶)⏶))
-        # Input line short : 73 + (3 * (1 * <(((3 + (6 - 2)) * 6) + >((52 * 6) / <(13 - (7 - 2))^)^)^))
-        # Embedding levels : 00000000000000001112111121112111112111112222222222222344333343334332211000
-        # Flips            :                                                       --
-        #                                                                         --------------
-        #                                                            -----------------------------
-        #                                    -------------------------------------------------------
-        # After 1st flip   : 73 + (3 * (1 * <(((3 + (6 - 2)) * 6) + >((52 * 6) / <(31 - (7 - 2))^)^)^))
-        # After 2nd flip   : 73 + (3 * (1 * <(((3 + (6 - 2)) * 6) + >((52 * 6) / <((2 - 7) - 13)^)^)^))
-        # After 3rd flip   : 73 + (3 * (1 * <(((3 + (6 - 2)) * 6) + >(^(31 - (7 - 2))< / (6 * 25))^)^))
-        # After 4th flip   : 73 + (3 * (1 * <(^((52 * 6) / <((2 - 7) - 13)^)> + (6 * ((2 - 6) + 3)))^))
-        # Result           : 73 + (3 * (1 * (((52 * 6) / ((2 - 7) - 13)) + (6 * ((2 - 6) + 3)))))
-        eq_dict = self.convert_eq_dict(equation)
-        embed_dict = self.identify_embed_levels(eq_dict)
-        if visualize:
-            embed_str = [str(embed_dict[idx]) for idx in sorted(embed_dict.keys())]
-            print("Input line short :", self.build_equation(eq_dict))
+    def project_lynx(self, equation, debug: bool = False):
+        eq_dict, embed_level, max_embed, flip_no = ({}, 0, 0, 0)
+        for char_idx, char in enumerate(equation):
+            # Determine effective embed level for this character
+            level = embed_level + 1 if (char.isdigit() and embed_level % 2 == 1) else embed_level
+            eq_dict[char_idx] = [char, level]
+            max_embed = max(max_embed, level)
+            # Update embedding level based on BIDI control characters
+            if char in {"\u2067", "\u2066"}:  # RLI, LRI
+                embed_level += 1
+            elif char == "\u2069":  # PDI
+                embed_level = max(embed_level - 1, 0)
+                eq_dict[char_idx][1] = embed_level  # override level for PDI
+        if debug:
+            embed_str = [str(eq_dict[idx][1]) * len(str(eq_dict[idx][0])) for idx in sorted(eq_dict)]
+            print("Input line short :", self.__equation_str(eq_dict))
             print("Embedding levels :", ''.join(embed_str))
-        flip_no = 0
-        while True:
-            rev_eq, rev_embed = self.__flip_equation(eq_dict, embed_dict)
-            flip_no += 1
-            if visualize:
-                print(f"Eq after {flip_no} flips : {self.build_equation(rev_eq)}")
-            eq_dict = rev_eq
-            embed_dict = rev_embed
-            max_embed = max(embed_dict.values())
-            if max_embed == 0:
-                break
-        stripped_text = []
-        for c in eq_dict.values():
-            if c not in self.BIDI_CONTROLS.keys():
-                stripped_text.append(c)
-        strip_bill = ''.join(stripped_text)
-        bill_value = self.evaluate_sum(strip_bill)
-        return bill_value
+
+        while max_embed >= 1:
+            eq_dict, flip_stretch = self.__reverse_string(eq_dict)
+            max_embed = max(level for (_, level) in eq_dict.values())
+            if debug and len(flip_stretch) >= 2:
+                flip_no += 1
+                flip_str = ''.join(
+                    '_' * len(char) if idx in flip_stretch else ' ' * len(char)
+                    for idx, (char, _) in eq_dict.items()
+                )
+                print(f"  Flip Positions :", flip_str)
+                print(f"  After {flip_no:02d} flips : {self.__equation_str(eq_dict)}")
+        flipped_bill = ''.join(char for char, _ in eq_dict.values())
+        stripped_bill = self.__strip_eq(flipped_bill)
+        bill_value = self.evaluate_sum(stripped_bill)
+        return bill_value, stripped_bill
 
     def count_scams(self, bill_list, debug: bool = False):
         scam_counter = {}
-        for bill_no, bill in enumerate(bill_list[4:], start = 1):
-            rex_value = self.project_rex(bill)
-            lynx_value = self.project_lynx(bill, debug)
+        for bill_no, bill in enumerate(bill_list, start = 1):
+            parsed_bill = self.parse_equation(bill)
+            rex_value, rex_eq = self.project_rex(parsed_bill)
+            lynx_value, lynx_eq = self.project_lynx(parsed_bill, debug)
             abs_diff = abs(rex_value - lynx_value)
             scam_counter[bill_no] = abs_diff
             if debug:
+                print(" Rex Eq:", rex_eq)
+                print("Lynx Eq:", lynx_eq)
                 print(f"Bill {bill_no}: Abs_diff = {abs_diff} | Lynx = {lynx_value} | Rex = {rex_value}")
         return scam_counter
 
-
-total_scams = Scam_Checker().count_scams(input_data, True)
+total_scams = Scam_Checker().count_scams(input_data)
 print("Total Scams Value:", sum(total_scams.values()))
 
-print(f"Execution Time = {time.time() - start_time:.5f}s")
-
-# Line 1 according to Lynx: 66, but according to Rex: 42. The absolute difference is: 24.
-# Line 2 according to Lynx: 65, but according to Rex: 260. The absolute difference is: 195.
-# Line 3 according to Lynx: 30720, but according to Rex: 15040. The absolute difference is: 15680.
-# Line 4 according to Lynx: 5851, but according to Rex: 6300. The absolute difference is: 449.
-# Line 5 according to Lynx: 139, but according to Rex: 2760. The absolute difference is: 2621.
-# Line 6 according to Lynx: 3, but according to Rex: 316. The absolute difference is: 313.
-
+# print(f"Execution Time = {time.time() - start_time:.5f}s")
