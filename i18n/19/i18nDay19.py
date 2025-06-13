@@ -1,3 +1,4 @@
+# %%
 """i18n Puzzles - Puzzle 19
 Solution Started: Jun 11, 2025
 Puzzle Link: https://i18n-puzzles.com/puzzle/19
@@ -7,7 +8,7 @@ Brief: [Out of date]
 
 #!/usr/bin/env python3
 
-import os, re, copy, time, pytz
+import os, re, copy, time, pytz, zoneinfo
 from collections import defaultdict
 from datetime import datetime, timedelta, timezone
 import urllib.request
@@ -25,8 +26,9 @@ class TimeLogger:
     TZ_VERSIONS = ('2018c', '2018g', '2021b', '2023d')
     LOG_FORMAT  = 'yyyy-mm-ddThh:mm:ss+00:00'
 
-    def download_tz_version(self, required_tz):
-        """Download tzdb-<version>.tar.lz.asc files from IANA to ./tz_versions/ folder"""
+    @staticmethod
+    def download_tz_version(required_tz, debug = False):
+        """Download tzdata-<version>.tar.gz files from IANA to ./tz_versions/ folder"""
         tz_files = {}
 
         # Create subdirectory if it doesn't exist
@@ -35,18 +37,20 @@ class TimeLogger:
         os.makedirs(tz_dir, exist_ok=True)
 
         for version in required_tz:
-            filename = f"tzdb-{version}.tar.lz"  + '.asc'
+            filename = f"tzdata{version}.tar.gz"
             url = f"https://data.iana.org/time-zones/releases/{filename}"
             dest = os.path.join(tz_dir, filename)
 
             if not os.path.exists(dest):
-                # print(f"⬇️ Downloading {filename}...")
                 urllib.request.urlretrieve(url, dest)
-            else:
-                # print(f"📂 Already downloaded: {filename}")
-                pass
+            # Try extracting with correct tar option
+            # try:
+            #     os.system(f'tar --one-top-level -xf "{dest}"')
+            # except Exception as e:
+            #     print(f"⚠️ tar extraction failed: {e}")
+            # os.system('tar -xf tzdata{0}.tar.gz --osne-top-level'.format(version))
+            os.system('zic -d {0} tzdata{0}/africa tzdata{0}/antarctica tzdata{0}/asia tzdata{0}/australasia tzdata{0}/etcetera tzdata{0}/europe tzdata{0}/northamerica tzdata{0}/southamerica'.format(version))
             tz_files[version] = dest
-
         return tz_files
 
     def correct_time_record(self, signal):
@@ -66,7 +70,7 @@ class TimeLogger:
         self.station_log = defaultdict(int)
         self.research_stations = set()
         self.tz_files = self.download_tz_version(self.TZ_VERSIONS)
-        print(self.tz_files)
+        # print(self.tz_files)
         for signal in signal_log:
             updated_time = self.correct_time_record(signal)
         total_stations = len(self.research_stations)
@@ -74,7 +78,6 @@ class TimeLogger:
 
 signal_timestamp = TimeLogger().identify_signal_time(input_data, True)
 print("UTC Signal Timestamp:", signal_timestamp)
-
 
 print(f"Execution Time = {time.time() - start_time:.5f}s")
 
@@ -87,4 +90,3 @@ print(f"Execution Time = {time.time() - start_time:.5f}s")
 # 2024-04-13 00:24:00; Asia/Pyongyang converts to 2024-04-12T15:54:00+00:00.
 # 2024-04-13 01:54:00; Antarctica/Casey converts to 2024-04-12T14:54:00+00:00.
 # 2024-04-13 07:43:00; Antarctica/Casey converts to 2024-04-12T20:43:00+00:00.
-
