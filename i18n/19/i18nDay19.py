@@ -48,19 +48,31 @@ class TimeLogger:
             #     os.system(f'tar --one-top-level -xf "{dest}"')
             # except Exception as e:
             #     print(f"⚠️ tar extraction failed: {e}")
-            # os.system('tar -xf tzdata{0}.tar.gz --osne-top-level'.format(version))
+            os.system('tar -xf tzdata{0}.tar.gz --osne-top-level'.format(version))
             os.system('zic -d {0} tzdata{0}/africa tzdata{0}/antarctica tzdata{0}/asia tzdata{0}/australasia tzdata{0}/etcetera tzdata{0}/europe tzdata{0}/northamerica tzdata{0}/southamerica'.format(version))
             tz_files[version] = dest
         return tz_files
 
-    def correct_time_record(self, signal):
+    def correct_time_version(self, timestamp, tz_local):
+        shifted_set = set()
+        for version, version_dir in self.tz_files.items():
+
+            local_dt = tz_local.localize(timestamp)  # Make it timezone-aware
+            dt_og = local_dt.astimezone(pytz.utc)  # Convert to UTC timezone
+            zoneinfo.reset_tzpath((version_dir,) + zoneinfo.TZPATH)
+            local_dtn = tz_local.localize(timestamp)  # Make it timezone-aware
+            dt_new = local_dtn.astimezone(pytz.utc)  # Convert to UTC timezone
+
+            print(version, dt_og, dt_new)
+        return shifted_set
+    def shift_time_record(self, signal):
         time_data, time_zone = signal.split('; ')
         tz_local = pytz.timezone(time_zone)
         strip_dt = datetime.strptime(time_data, "%Y-%m-%d %H:%M:%S")
 
         local_dt = tz_local.localize(strip_dt)  # Make it timezone-aware
         utc_dt = local_dt.astimezone(pytz.utc)  # Convert to UTC timezone
-
+        corrected = self.correct_time_version(strip_dt, tz_local)
         # print(local_dt, utc_dt, tz_local)
         # self.research_stations.add(tz_local)
         self.station_log[time_zone] += 1
@@ -71,8 +83,8 @@ class TimeLogger:
         self.research_stations = set()
         self.tz_files = self.download_tz_version(self.TZ_VERSIONS)
         # print(self.tz_files)
-        for signal in signal_log:
-            updated_time = self.correct_time_record(signal)
+        for signal in signal_log[:1]:
+            updated_time = self.shift_time_record(signal)
         total_stations = len(self.research_stations)
         return len(signal_log)
 
