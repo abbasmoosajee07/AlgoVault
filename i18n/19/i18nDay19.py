@@ -24,7 +24,7 @@ with open(D19_file_path) as file:
 
 class TimeLogger:
     TZ_VERSIONS = ('2018c', '2018g', '2021b', '2023d')
-    LOG_FORMAT  = 'yyyy-mm-ddThh:mm:ss+00:00'
+    LOG_FORMAT  = '%Y-%m-%dT%H:%M:%S%z'
 
     @staticmethod
     def download_tz_version(required_tz, debug = False):
@@ -53,38 +53,53 @@ class TimeLogger:
             tz_files[version] = dest
         return tz_files
 
-    def correct_time_version(self, timestamp, tz_local):
+    def correct_time_version(self, time_data, tz_local, version):
         shifted_set = set()
-        for version, version_dir in self.tz_files.items():
 
-            local_dt = tz_local.localize(timestamp)  # Make it timezone-aware
-            dt_og = local_dt.astimezone(pytz.utc)  # Convert to UTC timezone
-            zoneinfo.reset_tzpath((version_dir,) + zoneinfo.TZPATH)
-            local_dtn = tz_local.localize(timestamp)  # Make it timezone-aware
-            dt_new = local_dtn.astimezone(pytz.utc)  # Convert to UTC timezone
+        # Localize with system's current zoneinfo (original conversion)
+        timestamp = datetime.strptime(time_data, "%Y-%m-%d %H:%M:%S")
+        local_dt = tz_local.localize(timestamp)  # timezone-aware
+        dt_og = local_dt.astimezone(pytz.utc)    # converted to UTC
 
-            print(version, dt_og, dt_new)
-        return shifted_set
-    def shift_time_record(self, signal):
-        time_data, time_zone = signal.split('; ')
-        tz_local = pytz.timezone(time_zone)
-        strip_dt = datetime.strptime(time_data, "%Y-%m-%d %H:%M:%S")
+        # Inject the version-specific tzdata into zoneinfo
+        zoneinfo.ZoneInfo.clear_cache()
+        # print(os.path.abspath(version))
+        version_dir = self.tz_files[version]
+        # print(version_dir)
+        zoneinfo.reset_tzpath([os.path.abspath(version)])
+        timestamp = datetime.strptime(time_data, "%Y-%m-%d %H:%M:%S")
 
-        local_dt = tz_local.localize(strip_dt)  # Make it timezone-aware
-        utc_dt = local_dt.astimezone(pytz.utc)  # Convert to UTC timezone
-        corrected = self.correct_time_version(strip_dt, tz_local)
-        # print(local_dt, utc_dt, tz_local)
-        # self.research_stations.add(tz_local)
-        self.station_log[time_zone] += 1
-        return
+        # Get the updated tzinfo from zoneinfo for this version
+        tz_custom = zoneinfo.ZoneInfo(tz_local.zone)
+
+        # Recreate localized datetime with that version's tzinfo
+        dt_new = timestamp.replace(tzinfo=tz_custom)
+        dt_new_utc = dt_new.astimezone(pytz.utc)
+
+        # Compare the UTC time results
+        if dt_og != dt_new_utc:
+            shifted_set.add(version)
+
+        # Format output as LOG_FORMAT
+        dt_fmt = dt_new_utc.strftime('%Y-%m-%dT%H:%M:%S%z')
+        dt_fmt = f"{dt_fmt[:-2]}:{dt_fmt[-2:]}"  # insert colon in UTC offset
+
+        print(f"Version: {version}, UTC: {dt_new_utc}, Formatted: {dt_fmt}")
+
+        return dt_fmt
 
     def identify_signal_time(self, signal_log, debug: bool = False):
+        signal_list = [tuple(line.split('; ')) for line in signal_log]
+
         self.station_log = defaultdict(int)
         self.research_stations = set()
         self.tz_files = self.download_tz_version(self.TZ_VERSIONS)
-        # print(self.tz_files)
-        for signal in signal_log[:1]:
-            updated_time = self.shift_time_record(signal)
+
+        for version in self.TZ_VERSIONS:
+            for time_data, time_zone in signal_list[:1]:
+                tz_local = pytz.timezone(time_zone)
+                corrected = self.correct_time_version(time_data, tz_local, version)
+                self.station_log[corrected] += 1
         total_stations = len(self.research_stations)
         return len(signal_log)
 
