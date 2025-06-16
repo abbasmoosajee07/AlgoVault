@@ -8,7 +8,7 @@ Brief: [Out of date]
 
 #!/usr/bin/env python3
 
-import os, re, copy, time, pytz, zoneinfo
+import os, re, copy, time, pytz, zoneinfo, tarfile
 from collections import defaultdict
 from datetime import datetime, timedelta, timezone
 import urllib.request
@@ -24,56 +24,71 @@ with open(D19_file_path) as file:
 
 class TimeLogger:
     TZ_VERSIONS = ('2018c', '2018g', '2021b', '2023d')
+    SAVE_FOLDER = "tz_versions"
     LOG_FORMAT  = '%Y-%m-%dT%H:%M:%S%z'
 
-    @staticmethod
-    def download_tz_version(required_tz, debug = False):
-        """Download tzdata-<version>.tar.gz files from IANA to ./tz_versions/ folder"""
+    def download_tz_version(self, required_tz, debug=False):
+        """Download and extract tzdata-<version>.tar.gz files from IANA"""
         tz_files = {}
 
-        # Create subdirectory if it doesn't exist
         script_dir = os.path.dirname(os.path.abspath(__file__))
-        tz_dir = os.path.join(script_dir, "tz_versions")
+        tz_dir = os.path.join(script_dir, self.SAVE_FOLDER)
+        self.tz_dir = tz_dir
         os.makedirs(tz_dir, exist_ok=True)
+        print(tz_dir)
 
         for version in required_tz:
             filename = f"tzdata{version}.tar.gz"
             url = f"https://data.iana.org/time-zones/releases/{filename}"
             dest = os.path.join(tz_dir, filename)
+            extract_dir = os.path.join(tz_dir, f"tzdata{version}")
 
             if not os.path.exists(dest):
+                if debug:
+                    print(f"Downloading {url}...")
                 urllib.request.urlretrieve(url, dest)
-            # Try extracting with correct tar option
-            # try:
-            #     os.system(f'tar --one-top-level -xf "{dest}"')
-            # except Exception as e:
-            #     print(f"⚠️ tar extraction failed: {e}")
-            os.system('tar -xf tzdata{0}.tar.gz --osne-top-level'.format(version))
-            os.system('zic -d {0} tzdata{0}/africa tzdata{0}/antarctica tzdata{0}/asia tzdata{0}/australasia tzdata{0}/etcetera tzdata{0}/europe tzdata{0}/northamerica tzdata{0}/southamerica'.format(version))
-            tz_files[version] = dest
+
+            if not os.path.exists(extract_dir):
+                if debug:
+                    print(f"Extracting to {extract_dir}...")
+                new_dir = os.makedirs(extract_dir, exist_ok=True)
+                with tarfile.open(dest, "r:gz") as tar:
+                    tar.extractall(path=extract_dir,numeric_owner=True)
+                # print(extract_dir)
+
+
+            # Compile time zone files
+            zoneinfo_dir = extract_dir # os.path.join(tz_dir, f"zoneinfo_{version}")
+            os.makedirs(zoneinfo_dir, exist_ok=True)
+            os.system(f'zic -d "{zoneinfo_dir}" {extract_dir}/africa {extract_dir}/antarctica '
+                      f'{extract_dir}/asia {extract_dir}/australasia {extract_dir}/etcetera '
+                      f'{extract_dir}/europe {extract_dir}/northamerica {extract_dir}/southamerica')
+
+            tz_files[version] = zoneinfo_dir
+
         return tz_files
 
-    def correct_time_version(self, time_data, tz_local, version):
-        shifted_set = set()
 
-        # Localize with system's current zoneinfo (original conversion)
+    def correct_time_version(self, time_data, time_zone, version):
+        shifted_set = set()
+        # Extract Data
         timestamp = datetime.strptime(time_data, "%Y-%m-%d %H:%M:%S")
+        tz_local = pytz.timezone(time_zone)
+
         local_dt = tz_local.localize(timestamp)  # timezone-aware
         dt_og = local_dt.astimezone(pytz.utc)    # converted to UTC
 
         # Inject the version-specific tzdata into zoneinfo
-        zoneinfo.ZoneInfo.clear_cache()
-        # print(os.path.abspath(version))
         version_dir = self.tz_files[version]
+        # version_dir = os.path.abspath(version)
+        # print(os.path.abspath(version))
         # print(version_dir)
-        zoneinfo.reset_tzpath([os.path.abspath(version)])
+        zoneinfo.ZoneInfo.clear_cache()
+        zoneinfo.reset_tzpath([version_dir])
         timestamp = datetime.strptime(time_data, "%Y-%m-%d %H:%M:%S")
 
-        # Get the updated tzinfo from zoneinfo for this version
-        tz_custom = zoneinfo.ZoneInfo(tz_local.zone)
-
         # Recreate localized datetime with that version's tzinfo
-        dt_new = timestamp.replace(tzinfo=tz_custom)
+        dt_new = timestamp.replace(tzinfo=tz_local)
         dt_new_utc = dt_new.astimezone(pytz.utc)
 
         # Compare the UTC time results
@@ -84,7 +99,7 @@ class TimeLogger:
         dt_fmt = dt_new_utc.strftime('%Y-%m-%dT%H:%M:%S%z')
         dt_fmt = f"{dt_fmt[:-2]}:{dt_fmt[-2:]}"  # insert colon in UTC offset
 
-        print(f"Version: {version}, UTC: {dt_new_utc}, Formatted: {dt_fmt}")
+        print(f"Version: {version}, {dt_new} Formatted: {dt_fmt}")
 
         return dt_fmt
 
@@ -95,16 +110,27 @@ class TimeLogger:
         self.research_stations = set()
         self.tz_files = self.download_tz_version(self.TZ_VERSIONS)
 
-        for version in self.TZ_VERSIONS:
-            for time_data, time_zone in signal_list[:1]:
-                tz_local = pytz.timezone(time_zone)
-                corrected = self.correct_time_version(time_data, tz_local, version)
+        for time_data, time_zone in signal_list[:1]:
+            for version in self.TZ_VERSIONS:
+                print(f"UTC: {time_data} {time_zone}")
+                corrected = self.correct_time_version(time_data, time_zone, version)
                 self.station_log[corrected] += 1
         total_stations = len(self.research_stations)
+        for stamp, count in self.station_log.items():
+            print(stamp, count)
+            if count == total_stations:
+                print(stamp, "Valid")
+        self.delete_tz()
         return len(signal_log)
+
+    def delete_tz(self):
+        import shutil
+        # Delete the folder and all its contents
+        shutil.rmtree(self.tz_dir)
 
 signal_timestamp = TimeLogger().identify_signal_time(input_data, True)
 print("UTC Signal Timestamp:", signal_timestamp)
+
 
 print(f"Execution Time = {time.time() - start_time:.5f}s")
 
