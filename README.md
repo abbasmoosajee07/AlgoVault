@@ -13,7 +13,7 @@ This project contains a Python script (`CreateScript.py`) that can be used to cr
 |-----------------------------|-----------|--------|---------|-----------|-----------|
 | [Codyssi: Journey to Atlantis](https://www.codyssi.com/challenge_set_2?)| 2024/2025 | [Link](https://github.com/abbasmoosajee07/AlgoVault/tree/main/Codyssi)   | 18      | 18        | ✅ Done  |
 | [piDay](https://ivanr3d.com/projects/pi/)             | 2024/2025 | [Link](https://github.com/abbasmoosajee07/AlgoVault/tree/main/pi)   | 2       | 2         | ✅ Done  |
-| [i18n Challenges](https://i18n-puzzles.com/)             | 20 Puzzles| [Link](https://github.com/abbasmoosajee07/AlgoVault/tree/main/i18n)   | 20      | 15        | 🕒 In Progress |
+| [i18n Challenges](https://i18n-puzzles.com/)             | 20 Puzzles| [Link](https://github.com/abbasmoosajee07/AlgoVault/tree/main/i18n)   | 20      | 18        | 2 Left |
 
 
 -------------
