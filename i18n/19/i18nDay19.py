@@ -1,4 +1,3 @@
-# %%
 """i18n Puzzles - Puzzle 19
 Solution Started: Jun 11, 2025
 Puzzle Link: https://i18n-puzzles.com/puzzle/19
@@ -8,15 +7,16 @@ Brief: [Out of date]
 
 #!/usr/bin/env python3
 
+from pathlib import Path
 import os, re, copy, time
+import requests, tarfile, shutil
 from collections import defaultdict
-from zoneinfo import reset_tzpath, ZoneInfo
 from datetime import timezone, datetime
-import requests, os, time, tarfile, shutil
+from zoneinfo import reset_tzpath, ZoneInfo
 start_time = time.time()
 
 # Load the input data from the specified file path
-D19_file = "Day19_input1.txt"
+D19_file = "Day19_input.txt"
 D19_file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), D19_file)
 
 # Read and sort input data into a grid
@@ -25,15 +25,20 @@ with open(D19_file_path) as file:
 
 class TimeLogger:
     TZ_VERSIONS = ('2018c', '2018g', '2021b', '2023d')
-    LOG_FORMAT  = '%Y-%m-%dT%H:%M:%S%z'
+
+    def __init__(self, cleanup: bool = True, debug: bool = False):
+        self.cleanup, self.debug = (cleanup, debug)
+        self.base_dir = Path(__file__).resolve().parent / "old_tzdata"
+        self.extract_dir = self.base_dir / "extracted"
+        self.base_dir.mkdir(parents=True, exist_ok=True)
+        self.extract_dir.mkdir(parents=True, exist_ok=True)
+        self.tz_files = self.get_tz_files(self.TZ_VERSIONS)
 
     @staticmethod
     def get_package_and_version(version_name: str) -> tuple[str, str]:
-        """Decide which package to use and convert version if needed."""
-        def conv_version(tz_version: str) -> str:
-            """Convert from lettered tzdata version (e.g., '2018c') to dotted format (e.g., '2018.3')"""
-            num_version = ord(tz_version[-1]) - ord('a') + 1
-            return f"{tz_version[:-1]}.{num_version}"
+        """Map a tz version to the appropriate package and dotted version format."""
+        def conv_version(name: str) -> str:
+            return f"{name[:-1]}.{ord(name[-1]) - ord('a') + 1}"
 
         if version_name < "2013f":
             return "pytz", version_name
@@ -41,149 +46,105 @@ class TimeLogger:
             return "pytz", conv_version(version_name)
         elif version_name < "2020a":
             return "pytzdata", conv_version(version_name)
-        else:
-            return "tzdata", conv_version(version_name)
+        return "tzdata", conv_version(version_name)
 
-    @staticmethod
-    def find_and_copy_zoneinfo(root_dir: str, output_dir: str, version: str) -> str:
-        for dirpath, _, _ in os.walk(root_dir):
-            if os.path.basename(dirpath) == "zoneinfo":
-                dest = os.path.join(output_dir, f"{version}_zoneinfo")
-                shutil.copytree(dirpath, dest, dirs_exist_ok=True)
-                return dest
-        raise FileNotFoundError("No 'zoneinfo' folder found in the given directory.")
-
-    @staticmethod
-    def download_tarball(package: str, version: str, base_dir: str) -> str:
-        """Download the tarball file from PyPI if it doesn't already exist."""
-        tarball_path = os.path.join(base_dir, f"{package}-{version}.tar.gz")
-        if os.path.exists(tarball_path):
+    def download_tarball(self, package: str, version: str) -> Path:
+        """Download tzdata tarball if not already present."""
+        tarball_path = self.base_dir / f"{package}-{version}.tar.gz"
+        if tarball_path.exists():
             return tarball_path
 
         url = f"https://files.pythonhosted.org/packages/source/{package[0]}/{package}/{package}-{version}.tar.gz"
-        print(f"⬇️ Downloading {package}-{version} from {url}...")
+        if self.debug:
+            print(f"⬇️ Downloading {package}-{version} from {url}...")
         response = requests.get(url, stream=True)
         response.raise_for_status()
-
-        os.makedirs(base_dir, exist_ok=True)
-        with open(tarball_path, "wb") as f:
+        with tarball_path.open("wb") as f:
             for chunk in response.iter_content(chunk_size=8192):
                 f.write(chunk)
         return tarball_path
 
-    def extract_tarball_and_find_zoneinfo(self, tarball_path: str, extract_base: str, package: str, version_name: str) -> str:
-        """Extract the tarball if needed and return the path to the copied zoneinfo folder."""
-        extract_dir = os.path.join(extract_base, f"{package}-{version_name}")
-        os.makedirs(extract_base, exist_ok=True)
+    @staticmethod
+    def find_and_copy_zoneinfo(root_dir: Path, output_dir: Path, version: str) -> Path:
+        """Locate and copy the 'zoneinfo' folder from an extracted tree."""
+        for dirpath, _, _ in os.walk(root_dir):
+            if Path(dirpath).name == "zoneinfo":
+                dest = output_dir / f"{version}_zoneinfo"
+                shutil.copytree(dirpath, dest, dirs_exist_ok=True)
+                return dest
+        raise FileNotFoundError(f"No 'zoneinfo' folder found in {root_dir}.")
 
-        if not os.path.exists(extract_dir) or not os.listdir(extract_dir):
+    def extract_zoneinfo(self, tarball_path: Path, package: str, version_name: str) -> Path:
+        """Extract tarball and find 'zoneinfo'."""
+        extract_path = self.extract_dir / f"{package}-{version_name}"
+        if not extract_path.exists() or not any(extract_path.iterdir()):
             with tarfile.open(tarball_path, "r:gz") as tar:
-                tar.extractall(path=extract_dir, filter="tar")
+                tar.extractall(path=extract_path, filter="tar")
+        return self.find_and_copy_zoneinfo(extract_path, self.extract_dir, version_name)
 
-        return self.find_and_copy_zoneinfo(extract_dir, extract_base, version_name)
-
-    def get_tz_files(self, required_tz, tz_folder = "old_tzdata"):
-        """Download and extract tzdata-<version>.tar.gz files from IANA"""
+    def get_tz_files(self, required_tz: list[str]) -> dict[str, str]:
+        """Download and extract required tzdata files."""
         tz_files = {}
-
-        base_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), tz_folder)
-        extract_base = os.path.join(base_dir, "extracted")
         for version_name in required_tz:
             package, version = self.get_package_and_version(version_name)
-            tarball_path = self.download_tarball(package, version, base_dir)
-            path = self.extract_tarball_and_find_zoneinfo(tarball_path, extract_base, package, version_name)
-            tz_files[version_name] = path
-        return tz_files, extract_base
+            tarball = self.download_tarball(package, version)
+            zoneinfo_path = self.extract_zoneinfo(tarball, package, version_name)
+            tz_files[version_name] = str(zoneinfo_path)
+            if self.debug:
+                print(f"Version {version_name} saved to {str(zoneinfo_path)}")
+        return tz_files
 
     @staticmethod
-    def delete_tz_files(folder):
-        """Delete the extracted folder and all its contents"""
-        shutil.rmtree(folder)
+    def delete_tz_files(folder: Path):
+        """Delete the extracted tz folder."""
+        shutil.rmtree(folder, ignore_errors=True)
 
-    def correct_time_version(self, time_data, time_zone):
-        # Parse timestamp and apply the given time zone from zoneinfo
-        timestamp = datetime.strptime(time_data, "%Y-%m-%d %H:%M:%S")
-        tz_local = ZoneInfo(time_zone)
+    def parse_signal_log(self, signal_log: list[str]) -> dict[str, list[datetime]]:
+        """Parse signal log entries into a dict of time zone → list of timestamps."""
+        parsed = defaultdict(list)
+        for line in signal_log:
+            time_str, zone_str = line.split('; ')
+            timestamp = datetime.strptime(time_str, '%Y-%m-%d %H:%M:%S')
+            parsed[zone_str].append(timestamp)
+        return parsed
 
-        # Convert to aware datetime using zoneinfo
-        local_dt = timestamp.replace(tzinfo=tz_local)
-        dt_og = local_dt.astimezone(timezone.utc)
+    @staticmethod
+    def convert_to_utc(timestamp: datetime, zone_str: str) -> datetime:
+        """Convert local timestamp in a time zone to UTC."""
+        tz_local = ZoneInfo(zone_str)
+        dt_local = timestamp.replace(tzinfo=tz_local)
+        dt_utc = dt_local.astimezone(timezone.utc)
+        return dt_utc
 
-        # Format to ISO 8601 with colon in offset
-        dt_fmt = dt_og.strftime('%Y-%m-%dT%H:%M:%S%z')
-        dt_fmt = f"{dt_fmt[:-2]}:{dt_fmt[-2:]}"  # insert colon in UTC offset
+    def identify_signal_time(self, signal_log: list[str]) -> str | None:
+        """Determine the UTC time at which all zones agree on the signal."""
+        signal_dict = self.parse_signal_log(signal_log)
+        station_log = defaultdict(set)
+        identified_signal = None
+        debug_list = []
 
-        # print(f"Local= {dt_og} | UTC= {dt_fmt}")
-        return dt_fmt
-
-    def identify_signal_time(self, signal_log, debug: bool = False):
-        self.tz_files, self.tz_dir = self.get_tz_files(self.TZ_VERSIONS)
-        signal_list = [tuple(line.split('; ')) for line in signal_log]
-
-        self.station_log = defaultdict(int)
-        self.research_stations = set()
-        for version in self.TZ_VERSIONS[:]:
-            version_dir = self.tz_files[version]
+        for version, zoneinfo_path in self.tz_files.items():
+            reset_tzpath([zoneinfo_path])
             ZoneInfo.clear_cache()
-            reset_tzpath([version_dir])
-            for time_data, zone_str in signal_list[:]:
-                corrected = self.correct_time_version(time_data, zone_str)
-                self.station_log[corrected] += 1
+            for zone, times in signal_dict.items():
+                for timestamp in times:
+                    corrected = self.convert_to_utc(timestamp, zone)
+                    station_log[corrected].add(zone)
+                    debug_list.append((version, zone, timestamp, corrected))
 
-        total_stations = len(self.TZ_VERSIONS)
-        for stamp, count in self.station_log.items():
-            # print(stamp, count)
-            if count == total_stations:
-                print(stamp, "Valid")
+        for stamp, zones in station_log.items():
+            if self.debug:
+                print(f"UTC: {stamp} |{len(zones)} Zones {zones}")
+            if len(zones) == len(signal_dict):
+                dt_str = stamp.strftime('%Y-%m-%dT%H:%M:%S%z')
+                if self.cleanup:
+                    self.delete_tz_files(self.extract_dir)
+                identified_signal = f"{dt_str[:-2]}:{dt_str[-2:]}"
+                if not self.debug:
+                    break
+        return identified_signal
 
-        # self.delete_tz_files(self.tz_dir)
-        return len(signal_log)
-
-signal_timestamp = TimeLogger().identify_signal_time(input_data, True)
-print("UTC Signal Timestamp:", signal_timestamp)
+signal_timestamp = TimeLogger().identify_signal_time(input_data)
+print("Signal Timestamp UTC:", signal_timestamp)
 
 print(f"Execution Time = {time.time() - start_time:.5f}s")
-
-# 2024-04-09T17:49:00+00:00; Antarctica/Casey
-# 2024-04-12T14:54:00+00:00; Antarctica/Casey
-# 2024-04-12T20:43:00+00:00; Antarctica/Casey
-
-# 2024-04-09T17:19:00+00:00; Asia/Pyongyang
-# 2024-04-09T18:49:00+00:00; Africa/Casablanca
-# 2024-04-12T03:13:00+00:00; Asia/Pyongyang
-# 2024-04-12T15:24:00+00:00; Asia/Pyongyang
-# 2024-04-12T15:54:00+00:00; Africa/Casablanca
-# 2024-04-12T16:43:00+00:00; Africa/Casablanca
-
-# Consider the following dataset, which serves as your test input:
-# 2024-04-09 18:49:00; Africa/Casablanca
-# 2024-04-10 02:19:00; Asia/Pyongyang
-# 2024-04-10 04:49:00; Antarctica/Casey
-# 2024-04-12 12:13:00; Asia/Pyongyang
-# 2024-04-12 15:54:00; Africa/Casablanca
-# 2024-04-12 16:43:00; Africa/Casablanca
-# 2024-04-13 00:24:00; Asia/Pyongyang
-# 2024-04-13 01:54:00; Antarctica/Casey
-# 2024-04-13 07:43:00; Antarctica/Casey
-
-# These are local times, combined with an IANA time zone identifier,
-# for that research station. You convert all of these to UTC, and sort them:
-# 2024-04-09T17:19:00+00:00; Asia/Pyongyang
-# 2024-04-09T17:49:00+00:00; Antarctica/Casey
-# 2024-04-09T18:49:00+00:00; Africa/Casablanca
-# 2024-04-12T03:13:00+00:00; Asia/Pyongyang
-# 2024-04-12T14:54:00+00:00; Antarctica/Casey
-# 2024-04-12T15:24:00+00:00; Asia/Pyongyang
-# 2024-04-12T15:54:00+00:00; Africa/Casablanca
-# 2024-04-12T16:43:00+00:00; Africa/Casablanca
-# 2024-04-12T20:43:00+00:00; Antarctica/Casey
-
-# 2024-04-09 18:49:00; Africa/Casablanca converts to 2024-04-09T17:49:00+00:00.
-# 2024-04-10 02:19:00; Asia/Pyongyang converts to 2024-04-09T17:49:00+00:00.
-# 2024-04-10 04:49:00; Antarctica/Casey converts to 2024-04-09T17:49:00+00:00.
-# 2024-04-12 12:13:00; Asia/Pyongyang converts to 2024-04-12T03:43:00+00:00.
-# 2024-04-12 15:54:00; Africa/Casablanca converts to 2024-04-12T14:54:00+00:00.
-# 2024-04-12 16:43:00; Africa/Casablanca converts to 2024-04-12T15:43:00+00:00.
-# 2024-04-13 00:24:00; Asia/Pyongyang converts to 2024-04-12T15:54:00+00:00.
-# 2024-04-13 01:54:00; Antarctica/Casey converts to 2024-04-12T14:54:00+00:00.
-# 2024-04-13 07:43:00; Antarctica/Casey converts to 2024-04-12T20:43:00+00:00.
