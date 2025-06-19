@@ -1,4 +1,5 @@
 # Ignore all DayXX_input.txt files in any subdirectory
 **/Day??_input.txt
+!i18n/**/Day??_input.txt
 __pycache__/
 *.exe

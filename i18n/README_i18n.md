@@ -23,6 +23,7 @@ This repository contains coding solutions for the i18n puzzles.
 17. **Puzzle 17- X marks the spot**: Decode a treasure map to find the coordinates of X. Essentially approached it as a puzzle, main assumption based on there being a single match for each section. *Favourite Puzzle tho* `Global ranking- 31`
 18. **Puzzle 18- Rex To Lynx**: Reading and evaluating equations, while checking for BiDi Characters. `Global ranking- 38`
 19. **Puzzle 19- Out of date**: Accounting for out-of-date time recording systems, by looking at last updated versions and then correcting for the shifts. Took a while to loading the old versions of the Zoneinfo databases. `Global ranking- 34`
+20. **Puzzle 20- The future of Unicode**: Decoding an encrypted message using a given sample. `Global ranking- `
 ---
 
 
