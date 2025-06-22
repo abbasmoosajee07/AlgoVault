@@ -50,25 +50,52 @@ class UnicodeEncryptor:
         binary_string = ' '.join(format(byte, '08b') for byte in utf8_bytes)
         return binary_string
 
+    def hex_to_bytes(self, hex_string: str) -> bytes:
+        return bytes(
+            int(hex_string[i:i + 2], 16)
+            for i in range(0, len(hex_string), 2)
+        )
+
+    def __to_utf16le(self, string):
+
+        return
+    def __identify_encoding(self, message):
+        bytes_data = base64.b64decode(message)  # could also be result of base64.b64decode(...)
+        print(bytes_data)
+        if bytes_data.startswith(b'\xff\xfe'):
+            return "utf-16-le", bytes_data[2:]
+        elif bytes_data.startswith(b'\xfe\xff'):
+            return "utf-16-be", bytes_data[2:]
+        elif bytes_data.startswith(b'\xef\xbb\xbf'):
+            return "utf-8-sig", bytes_data[3:]  # UTF-8 BOM is 3 bytes
+        else:
+            return "utf-8", bytes_data  # Default fallback
+
     def decode_message(self, encrypted):
         encrypted = self.test_message
-
+        encoding_type, bytes_data = self.__identify_encoding('\n'.join(encrypted))
         print('\n'.join(encrypted),'\n')
-
+        bytes_data = base64.b64decode('\n'.join(encrypted)[3:])
+        decoding = bytes_data.decode(encoding_type)
+        print(decoding)
         base64_list = []
         binary_list = []
         hex_list = []
         for line in encrypted:
+            bytes_data = base64.b64decode(line)
             line_base64 = self.__to_base64(line)
             base64_list.append(line_base64)
             hex_list.append(self.__to_hex(line))
             binary_list.append(self.__to_bytes(line_base64))
 
-        print('\n'.join(base64_list), '\n')
-        print('\n'.join(hex_list), '\n')
-        print('\n'.join(binary_list), '\n')
+        # print('\n'.join(base64_list), '\n')
+        # print('\n'.join(hex_list), '\n')
+        # print('\n'.join(binary_list), '\n')
+        return
 
 decoded = UnicodeEncryptor().decode_message(input_data)
+print("Decoded Message:", decoded)
+
 print(f"Execution Time = {time.time() - start_time:.5f}s")
 
 
