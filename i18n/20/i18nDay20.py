@@ -22,7 +22,8 @@ with open(D20_file_path) as file:
     input_data = file.read().strip().split('\n')
 
 class UnicodeEncryptor:
-    def __init__(self):
+    def __init__(self, debug: bool = False):
+        self.debug = debug
         self.test_message = self.__get_test("test_input.txt")
         self.decoded_test = "ꪪꪪꪪ This is a secret message. ꪪꪪꪪ Good luck decoding me! ꪪꪪꪪ"
 
@@ -32,36 +33,7 @@ class UnicodeEncryptor:
             input_data = file.read().strip().split('\n')
         return input_data
 
-    def __to_hex(self, string):
-        # Decode Base64 to bytes
-        decoded_bytes = base64.b64decode(string)
-        # Convert bytes to hexadecimal
-        hex_string = decoded_bytes.hex()
-        return hex_string
-
-    def __to_base64(self, string):
-        utf8_bytes = string.encode('utf-8')
-        return base64.b64encode(utf8_bytes).decode('utf-8')
-
-    def __to_bytes(self, string):
-        # Step 1: Encode to UTF-8 bytes
-        utf8_bytes = string.encode('utf-8')
-        # Step 2: Convert each byte to an 8-bit binary string
-        binary_string = ' '.join(format(byte, '08b') for byte in utf8_bytes)
-        return binary_string
-
-    def hex_to_bytes(self, hex_string: str) -> bytes:
-        return bytes(
-            int(hex_string[i:i + 2], 16)
-            for i in range(0, len(hex_string), 2)
-        )
-
-    def __to_utf16le(self, string):
-
-        return
-    def __identify_encoding(self, message):
-        bytes_data = base64.b64decode(message)  # could also be result of base64.b64decode(...)
-        print(bytes_data)
+    def __identify_encoding(self, bytes_data):
         if bytes_data.startswith(b'\xff\xfe'):
             return "utf-16-le", bytes_data[2:]
         elif bytes_data.startswith(b'\xfe\xff'):
@@ -71,52 +43,52 @@ class UnicodeEncryptor:
         else:
             return "utf-8", bytes_data  # Default fallback
 
+    def __get_utf16(self, encoded_message):
+        bytes_data = base64.b64decode(encoded_message)
+        if self.debug:
+            print(len(bytes_data), "Decoded bytes:", bytes_data)
+        self.encoding_type, stripped_bytes = self.__identify_encoding(bytes_data)
+        if self.debug:
+            print("Detected encoding:", self.encoding_type)
+        # Decode to text
+        utf16_text = stripped_bytes.decode(self.encoding_type)
+        if self.debug:
+            print(len(stripped_bytes), "Stripped Bytes:", stripped_bytes)
+            print(len(utf16_text), "Decoded text:", utf16_text)
+        return utf16_text, stripped_bytes
+
+    def utf16_to_n_bit_groups(self, text, n):
+        # Step 1: Convert each character to its Unicode code point
+        codepoints = [ord(c) for c in text]
+        # for byte_char in text:
+        #     print(byte_char, ord(byte_char))
+        print(codepoints)
+        # Step 2: Convert each code point to binary string (padded to 16+ bits)
+        bin_string = [f'{cp:020b}' for cp in codepoints]
+        bin_string = ''.join(bin_string)
+        print(bin_string)
+        # Step 3: Group into n-bit chunks
+        grouped = [bin_string[i:i+n] for i in range(0, len(bin_string), n)]
+
+        return grouped
+
     def decode_message(self, encrypted):
         encrypted = self.test_message
-        encoding_type, bytes_data = self.__identify_encoding('\n'.join(encrypted))
-        print('\n'.join(encrypted),'\n')
-        bytes_data = base64.b64decode('\n'.join(encrypted)[3:])
-        decoding = bytes_data.decode(encoding_type)
-        print(decoding)
-        base64_list = []
-        binary_list = []
-        hex_list = []
-        for line in encrypted:
-            bytes_data = base64.b64decode(line)
-            line_base64 = self.__to_base64(line)
-            base64_list.append(line_base64)
-            hex_list.append(self.__to_hex(line))
-            binary_list.append(self.__to_bytes(line_base64))
-
-        # print('\n'.join(base64_list), '\n')
-        # print('\n'.join(hex_list), '\n')
-        # print('\n'.join(binary_list), '\n')
+        joined_message = ''.join(encrypted)
+        if self.debug:
+            print(len(joined_message), "Base64 string:", joined_message)
+        utf16_text, utf16_bytes = self.__get_utf16(joined_message)
+        new_line = ''
+        for byte_char in utf16_bytes:
+            new_line += chr(byte_char)
+            print(byte_char,new_line[-1], ord(chr(byte_char)))
+        self.debug = True
+        print(new_line)
+        regrouped = self.utf16_to_n_bit_groups(utf16_text, 20)
+        print(' '.join(regrouped))
         return
 
 decoded = UnicodeEncryptor().decode_message(input_data)
 print("Decoded Message:", decoded)
 
 print(f"Execution Time = {time.time() - start_time:.5f}s")
-
-
-# //6y2+rcatqq3nvayN9q2qrebtqv3uLaqt5q2ojcP9mE3Craatws2frfxtmZ3uza+N4i2ijdLNj839rZ
-# Wt2n2KbcsttZ3CDbgd532sjfZdmz3TLab98m2rbdEtrv3mDaqt9q2q/e4tq63mraqt5/2o7catqq3mja
-# +N4G2mvfK9v839rZCt2Hm7LbWdzt2azeQ9rI32TZpd0i2m/f49qZ39rZWt5/24bcMtoJ3qXa/N7W2Ync
-# YNiq37Lbqtxq2rrea9rI32rart5q2qzeqgI=
-
-# fffeb2dbeadc6adaaade7bdac8df6adaaade6edaafdee2daaade6ada88dc3fd984dc2ada6adc2cd9fadfc6d999deecdaf8de22da28dd2cd8fcdfdad9
-# 5adda7d8a6dcb2db59dc20db81de77dac8df65d9b3dd32da6fdf26dab6dd12daefde60daaadf6adaafdee2dabade6adaaade7fda8edc6adaaade68da
-# f8de06da6bdf2bdbfcdfdad90add879bb2db59dcedd9acde43dac8df64d9a5dd22da6fdfe3da99dfdad95ade7fdb86dc32da09dea5dafcded6d989dc
-# 60d8aadfb2dbaadc6adabade6bdac8df6adaaede6adaacdeaa02
-
-# Ly82eTIrcmNhdHFxM252YXlOOXEycXJlYnRxdjN1TGFxdDVxMm9qY1A5bUUzQ3JhYXR3czJmcmZ4dG1aM3V6YStONGkyaWpkTE5qODM5clo=
-# V3QybjJLYmNzdHRaM0NEYmdkNTMyc2pmWmRtejNUTGFiOThtMnJiZEV0cnYzbURhcXQ5cTJxL2U0dHE2M21yYXF0NS8ybzdjYXRxcTNtamE=
-# K040RzJtdmZLOXY4MzlyWkN0MkhtN0xiV2R6dDJhemVROXJJMzJUWnBkMGkybS9mNDlxWjM5clpXdDUvMjRiY010b0ozcVhhL043VzJZbmM=
-# WU5pcTM3TGJxdHhxMnJyZWE5ckkzMnJhcnQ1cTJxemVxZ0k9
-
-# 01001100 01111001 00111000 00110010 01100101 01010100 01001001 01110010 01100011 01101101 01001110 01101000 01100100 01001000 01000110 01111000 01001101 00110010 00110101 00110010 01011001 01011000 01101100 01001111 01001111 01011000 01000101 01111001 01100011 01011000 01001010 01101100 01011001 01101110 01010010 01111000 01100100 01101010 01001110 00110001 01010100 01000111 01000110 01111000 01100100 01000100 01010110 01111000 01001101 01101101 00111001 01110001 01011001 00110001 01000001 00110101 01100010 01010101 01010101 01111010 01010001 00110011 01001010 01101000 01011001 01011000 01010010 00110011 01100011 01111010 01001010 01101101 01100011 01101101 01011010 00110100 01100100 01000111 00110001 01100001 01001101 00110011 01010110 00110110 01011001 01010011 01110100 01001111 01001110 01000111 01101011 01111001 01100001 01010111 01110000 01101011 01010100 01000101 00110101 01110001 01001111 01000100 01001101 00110101 01100011 01101100 01101111 00111101
-# 01010110 00110011 01010001 01111001 01100010 01101010 01001010 01001100 01011001 01101101 01001110 01111010 01100100 01001000 01010010 01100001 01001101 00110000 01001110 01000101 01011001 01101101 01100100 01101011 01001110 01010100 01001101 01111001 01100011 00110010 01110000 01101101 01010111 01101101 01010010 01110100 01100101 01101010 01001110 01010101 01010100 01000111 01000110 01101001 01001111 01010100 01101000 01110100 01001101 01101110 01001010 01101001 01011010 01000101 01010110 00110000 01100011 01101110 01011001 01111010 01100010 01010101 01010010 01101000 01100011 01011000 01010001 00110101 01100011 01010100 01001010 01111000 01001100 00110010 01010101 00110000 01100100 01001000 01000101 00110010 01001101 00110010 00110001 01111001 01011001 01011000 01000110 00110000 01001110 01010011 00111000 01111001 01100010 01111010 01100100 01101010 01011001 01011000 01010010 01111000 01100011 01010100 01001110 01110100 01100001 01101101 01000101 00111101
-# 01001011 00110000 00110100 00110000 01010010 01111010 01001010 01110100 01100100 01101101 01011010 01001100 01001111 01011000 01011001 00110100 01001101 01111010 01101100 01111001 01010111 01101011 01001110 00110000 01001101 01101011 01101000 01110100 01001110 00110000 01111000 01101001 01010110 00110010 01010010 00110110 01100100 01000100 01001010 01101000 01100101 01101101 01010110 01010010 01001111 01011000 01001010 01001010 01001101 01111010 01001010 01010101 01010111 01101110 01000010 01101011 01001101 01000111 01101011 01111001 01100010 01010011 00111001 01101101 01001110 01000100 01101100 01111000 01010111 01101010 01001101 00110101 01100011 01101100 01110000 01011000 01100100 01000100 01010101 01110110 01001101 01101010 01010010 01101001 01011001 00110000 00110001 00110000 01100010 00110000 01101111 01111010 01100011 01010110 01101000 01101000 01001100 00110000 00110100 00110011 01010110 01111010 01001010 01011010 01100010 01101101 01001101 00111101
-# 01010111 01010101 00110101 01110000 01100011 01010100 01001101 00110011 01010100 01000111 01001010 01111000 01100100 01001000 01101000 01111000 01001101 01101110 01001010 01111001 01011010 01010111 01000101 00110101 01100011 01101011 01101011 01111010 01001101 01101110 01001010 01101000 01100011 01101110 01010001 00110001 01100011 01010100 01001010 01111000 01100101 01101101 01010110 01111000 01011010 00110000 01101011 00111001
-
-# 1010101010101010
