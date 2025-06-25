@@ -84,7 +84,7 @@ class UnicodeEncryptor:
         # Step 3: Convert to hex representation
         bit_length = len(bitstream)
         hex_length = (bit_length + 3) // 4
-        hex_string = hex(int(bitstream, 2))[2:]#.zfill(hex_length)
+        hex_string = hex(int(bitstream, 2))[2:].zfill(hex_length)
 
         return {
             'binary': bitstream,
@@ -106,13 +106,11 @@ class UnicodeEncryptor:
         print("Binary:", result['binary'])
         print("Hex :", result['hex'])
 
-
         # regrouped = self.utf16_to_n_bit_groups(utf16_text, 20)
         # print(' '.join(regrouped))
         return
 
 decoded = UnicodeEncryptor().decode_message(input_data)
 print("Decoded Message:", decoded)
-
 
 print(f"Execution Time = {time.time() - start_time:.5f}s")
