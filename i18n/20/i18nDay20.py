@@ -105,7 +105,13 @@ class UnicodeEncryptor:
         print("Total bits:", result['bits'])
         print("Binary:", result['binary'])
         print("Hex :", result['hex'])
+        # Convert hex to bytes
+        byte_data = bytes.fromhex(result['hex'])
 
+        # Decode as UTF-8 (with replacement to avoid errors from invalid sequences)
+        decoded = byte_data.decode("utf-8", errors="replace")
+
+        print(decoded)
         # regrouped = self.utf16_to_n_bit_groups(utf16_text, 20)
         # print(' '.join(regrouped))
         return
