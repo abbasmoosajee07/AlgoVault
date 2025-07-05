@@ -1,12 +1,4 @@
-"""Synacor Challenge
-Solution Started: Jul 1, 2025
-Solution by: Abbas Moosajee
-Brief: [Synacor virtual Machine]
-"""
-
-import os, copy, time
-from VirtualMachine import VirtualMachine
-start_time = time.time()
+import copy
 
 class VirtualMachine:
     MODULUS = 32768
@@ -248,33 +240,6 @@ class VirtualMachine:
         info = f"[{self.pointer:05}: HALT] __PROGRAM TERMINATED__"
         self.op_log.append(info)
 
-    def run_computer(self):
-
-        self.program = [
-            1, 32768, 123,           # 1: set reg0 = 123
-            2, 32768,                # 2: push reg0
-            3, 32769,                # 3: pop reg1
-            4, 32770, 32768, 32769,  # 4: eq reg2 = (reg0 == reg1)
-            5, 32771, 32768, 32769,  # 5: gt reg3 = (reg0 > reg1)
-            # 6, 33,                   # 6: jmp to instruction index 33 (skips jt/jf)
-            # 7, 32771, 9999,          # 7: jt reg3 (0), should not jump
-            # 8, 32770, 9999,          # 8: jf reg2 (1), should not jump
-            9, 32772, 32768, 32769,  # 9: add reg4 = reg0 + reg1
-            10, 32773, 32772, 2,     # 10: mult reg5 = reg4 * 2
-            11, 32774, 32773, 3,     # 11: mod reg6 = reg5 % 3
-            12, 32775, 32773, 255,   # 12: and reg7 = reg5 & 255
-            13, 32768, 32774, 256,   # 13: or reg0 = reg6 | 256
-            14, 32769, 32768,        # 14: not reg1 = ~reg0
-            15, 32770, 50,           # 15: rmem reg2 = mem[50]
-            16, 50, 42,              # 16: wmem mem[50] = 42
-            # 17, 36,                  # 17: call jump to 36
-            # 18,                      # 18: ret (returns to 36+1 = 37)
-            # 19, 65,                  # 19: out 'A' (ASCII 65)
-            # 20, 32775,               # 20: in → reg7
-            21,                      # 21: noop
-            0                        # 0: halt
-        ]
-        self.memory = {i: v for i, v in enumerate(self.program)}
 
         while self.running and not self.paused:
             opcode = self.memory[self.pointer]
@@ -288,19 +253,3 @@ class VirtualMachine:
                 print(self.op_log[-1])
         # print(self.registers)
         return
-
-# Load the input data from the specified file path
-program_file = "challenge.bin"
-file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), program_file)
-vm_program = open(file_path, "rb").read()
-
-vm = VirtualMachine(vm_program, True)
-vm.run_computer()
-
-# from Intcode_Computer import Intcode_CPU
-# intcode_prog = [3,21,1008,21,8,20,1005,20,22,107,8,21,20,1006,20,31,1106,0,36,98,0,0,1002,21,125,20,4,20,1105,1,46,104,999,1105,1,46,1101,1000,1,20,4,20,1105,1,46,98,99]
-# cpu = Intcode_CPU(intcode_prog, init_inputs=[2], debug=True).process_program()
-
-
-print(f"Execution Time = {time.time() - start_time:.5f}s")
-
