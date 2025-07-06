@@ -5,14 +5,14 @@ class VirtualMachine:
 
     def __init__(self, program_bytes: bytes, debug: bool = False):
         """
-        Initialize the Virtual Machine
+        Initialize the Virtual Machine.
         """
         # Create an initial copy of the bytes program
         self.program_bytes = copy.deepcopy(program_bytes)
 
         # Flags for execution state
-        self.paused = False    # Indicates if the program is paused (e.g., waiting for input)
-        self.running = True    # Indicates if the program is still running (not halted)
+        self.paused: bool = False    # Indicates if the program is paused (e.g., waiting for input)
+        self.running: bool = True    # Indicates if the program is still running (not halted)
 
         # Debugging mode flag
         self.debug: bool = debug     # If True, additional debug information can be printed/logged
@@ -35,13 +35,15 @@ class VirtualMachine:
         self.output_stack: list = []
 
         # Memory: 15-bit address space 32K words of 16-bit values
-        # self.memory: list = [0] * self.MODULUS
-        # self.memory[:len(self.program)] = self.program
-        self.memory = {i: v for i, v in enumerate(self.program)}
+        self.memory: list = [0] * self.MODULUS
+        self.memory[:len(self.program)] = self.program
 
+        # Log of all operations performed by the computer
         self.op_log = []
 
-        # {21: 0, 19: 1, 6: 1, 7: 2, 8: 2, 1: 2, 9: 3, 4: 3, 2: 1, 3: 1, 5: 3, 12: 3, 13: 3, 14: 2, 17: 1, 10: 3, 11: 3, 15: 2, 16: 2, 18: 0, 20: 1}
+        self.input_terminal = []
+        self.output_terminal = [""]
+
         self.opcode_map = {
             0:  self.__terminate,
             1:  lambda: self.__set(2),
@@ -60,33 +62,20 @@ class VirtualMachine:
             14: lambda: self.__not(2),
             15: lambda: self.__rmem(2),
             16: lambda: self.__wmem(2),
+            17: lambda: self.__call(1),
+            18: lambda: self.__ret(0),
+            19: lambda: self.__out(1),
+            20: lambda: self.__input(1),
             21: self.__noop
         }
-
-    def __name(self, args_reqd):
-        """Func"""
-        a = self.__get_args(args_reqd)
-        info = f"[{self.pointer:05}: NAME] "
-        self.op_log.append(info)
-        self.pointer += args_reqd + 1
-        def get(n):
-            return n if n < self.MODULUS else self.registers[n-self.MODULUS]
-        def set_register(register, value):
-            self.registers[register-self.MODULUS] = value
-        def set_memory(address, value):
-            self.memory[address] = value
-        def set_ip(value, push_return_address=False):
-            if push_return_address:
-                self.stack.append(self.ip+2)
-            self.ip = value
 
     def get_num(self, val):
         """Validate number"""
         if 0 <= val <= 32767:
             sel_val = val
         elif 32768 <= val <= 32775:
-            sel_val = self.registers[self.__mod_math(val)]
             sel_val = self.__mod_math(val)
+            # print(val, sel_val, self.registers[sel_val])
         elif 32776 <= val <= 65535:
             raise ValueError(f"Number {val} is invalid.")
         return sel_val
@@ -95,15 +84,14 @@ class VirtualMachine:
         """Calculate modular for the number"""
         return val % self.MODULUS
 
-    def __get_args(self, total_args: int):
+    def __get_args(self, total_args: int, corrected: bool = True):
         """Retrieve a list of arguments from memory starting from the current pointer position."""
         args_list = []
         for arg_no in range(1, total_args + 1):
-            args = self.memory.get(self.pointer + arg_no, 0)
-            args = self.pointer + arg_no
-            sel_args = self.get_num(args)
+            args = self.memory[self.pointer + arg_no]
+            sel_args = self.get_num(args) if corrected else args
             args_list.append(sel_args)
-        return args_list
+        return args_list[:]
 
     def __set(self, args_reqd):
         """Set register `a` to the value of `b`."""
@@ -150,6 +138,14 @@ class VirtualMachine:
         self.op_log.append(info)
         self.pointer += args_reqd + 1
 
+    def set_ip(self, value, push_return_address=False):
+        if push_return_address:
+            self.stack.append(self.ip+2)
+        self.ip = value
+        lambda a: self.set_ip((a)-2),                                 # jmp
+        lambda a, b: self.set_ip((b)-3 if (a) != 0 else self.ip),     # jt
+        lambda a, b: self.set_ip((b)-3 if (a) == 0 else self.ip),     # jf
+
     def __jump(self, args_reqd):
         """Jump to address `a`."""
         a, = self.__get_args(args_reqd)
@@ -157,19 +153,30 @@ class VirtualMachine:
         self.op_log.append(info)
         self.pointer = a
 
+    def get(self, n):
+        return n if n < self.MODULUS else self.registers[n-self.MODULUS]
+
     def __jump_to(self, args_reqd):
         """Jump to `b` if `a` != 0, else proceed."""
-        a, b = self.__get_args(args_reqd)
-        jump = b if a != 0 else self.pointer + args_reqd
-        condition = "!=" if a != 0 else "=="
-        info = f"[{self.pointer:05}: JTO] Jump pointer to {jump:05} (cond: {a} {condition} 0)"
+        a_raw, b_raw = self.__get_args(args_reqd, False)
+        # a_val = self.registers[self.get_num(a_raw)]
+        a_val = self.get(a_raw)
+        b_val = self.get(b_raw)
+        if a_val != 0:
+            jump = b_val  # jump target is absolute
+            condition = "!="
+        else:
+            jump = self.pointer + args_reqd + 1  # skip over instruction + args
+            condition = "=="
+
+        info = f"[{self.pointer:05}: JTO] Jump pointer to {jump:05} (cond: {a_val} {condition} 0)"
         self.op_log.append(info)
         self.pointer = jump
 
     def __jump_if(self, args_reqd):
         """Jump to `b` if `a` == 0, else proceed."""
         a, b = self.__get_args(args_reqd)
-        jump = b if a == 0 else self.pointer + args_reqd
+        jump = b if a == 0 else (self.pointer + args_reqd +1)
         condition = "==" if a == 0 else "!="
         info = f"[{self.pointer:05}: JIF] Jump pointer to {jump:05} (cond: {a} {condition} 0)"
         self.op_log.append(info)
@@ -206,7 +213,7 @@ class VirtualMachine:
     def __not(self, args_reqd):
         """Stores 15-bit bitwise inverse of `b` in `a`"""
         a, b = self.__get_args(args_reqd)
-        inv_bits = (~b) & 0x7FFF       # Invert and mask to 15 bits
+        inv_bits = (~b) & (self.MODULUS - 1)       # Invert and mask to 15 bits
         self.registers[a] = inv_bits
         info = f"[{self.pointer:05}: NOT] reg[{a}] = {inv_bits} (15 bit inverse of {b} stored)"
         self.op_log.append(info)
@@ -228,6 +235,39 @@ class VirtualMachine:
         self.op_log.append(info)
         self.pointer += args_reqd + 1
 
+    def __call(self, args_reqd):
+        """Write the address of the next instruction
+            to the stack and jump to `a`"""
+        a = self.__get_args(args_reqd)
+        info = f"[{self.pointer:05}: CAL] "
+        self.op_log.append(info)
+        self.pointer += args_reqd + 1
+
+    def __ret(self, args_reqd):
+        """Remove the top element from the stack and jump to it; empty stack = halt"""
+        info = f"[{self.pointer:05}: RET] "
+        self.op_log.append(info)
+        self.pointer += args_reqd + 1
+
+    def __out(self, args_reqd):
+        """Write the character represented by ascii code `a` to the terminal"""
+        a,  = self.__get_args(args_reqd)
+        char_a = chr(a)
+        self.output_terminal[-1] += char_a
+        info = f"[{self.pointer:05}: OUT] {repr(char_a)} goes to output terminal"
+        self.op_log.append(info)
+        self.pointer += args_reqd + 1
+
+    def __input(self, args_reqd):
+        """Read a character from the terminal and write its ascii code to `a`"""
+        a,  = self.__get_args(args_reqd)
+        input_char = self.input_terminal.pop(0)
+        input_ascii = ord(input_char)
+        self.registers[a] = input_ascii
+        info = f"[{self.pointer:05}: INP] reg[{a}] = {input_ascii} ({input_char} -> {input_ascii})"
+        self.op_log.append(info)
+        self.pointer += args_reqd + 1
+
     def __noop(self):
         """No Operation"""
         info = f"[{self.pointer:05}: NOP] No Operation Performed"
@@ -240,10 +280,11 @@ class VirtualMachine:
         info = f"[{self.pointer:05}: HALT] __PROGRAM TERMINATED__"
         self.op_log.append(info)
 
+    def run_computer(self, input_commands = []):
+        self.input_terminal = input_commands[:]
 
         while self.running and not self.paused:
             opcode = self.memory[self.pointer]
-            opcode = self.get_num(opcode)
 
             if opcode not in self.opcode_map:
                 raise ValueError(f"Unknown opcode {opcode} at position {self.pointer}")
@@ -251,5 +292,5 @@ class VirtualMachine:
             self.opcode_map[opcode]()  # Execute the corresponding operation
             if self.debug:
                 print(self.op_log[-1])
-        # print(self.registers)
+        print(self.output_terminal[-1])
         return
