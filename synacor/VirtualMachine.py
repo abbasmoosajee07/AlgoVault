@@ -4,11 +4,9 @@ class VirtualMachine:
     MODULUS = 32768
 
     def __init__(self, program_bytes: bytes, debug: bool = False):
-        """
-        Initialize the Virtual Machine.
-        """
+        """Initialize the Virtual Machine."""
         # Create an initial copy of the bytes program
-        self.program_bytes = copy.deepcopy(program_bytes)
+        self.program_bytes = program_bytes
 
         # Flags for execution state
         self.paused: bool = False    # Indicates if the program is paused (e.g., waiting for input)
@@ -17,8 +15,7 @@ class VirtualMachine:
         # Debugging mode flag
         self.debug: bool = debug     # If True, additional debug information can be printed/logged
 
-        # Pointer
-        self.pointer: int = 0
+        self.pointer: int = 0        # Pointer
 
         # Convert binary program to list of integers
         self.program: list[int] = [
@@ -27,9 +24,7 @@ class VirtualMachine:
         ]
 
         # Registers
-        self.registers: dict = {
-            reg_no: 0 for reg_no in range(8)
-        }
+        self.registers: dict = {reg_no: 0 for reg_no in range(8)}
 
         # Unbounded stack
         self.output_stack: list = []
@@ -41,247 +36,249 @@ class VirtualMachine:
         # Log of all operations performed by the computer
         self.op_log = []
 
-        self.input_terminal = []
+        self.input_terminal  = []
         self.output_terminal = [""]
 
         self.opcode_map = {
-            0:  self.__terminate,
-            1:  lambda: self.__set(2),
-            2:  lambda: self.__push(1),
-            3:  lambda: self.__pop(1),
-            4:  lambda: self.__equal_to(3),
-            5:  lambda: self.__greater(3),
-            6:  lambda: self.__jump(1),
-            7:  lambda: self.__jump_to(2),
-            8:  lambda: self.__jump_if(2),
-            9:  lambda: self.__arithmetic(3, "add"),
-            10: lambda: self.__arithmetic(3, "mul"),
-            11: lambda: self.__arithmetic(3, "mod"),
-            12: lambda: self.__and_or(3, "and"),
-            13: lambda: self.__and_or(3, " or"),
-            14: lambda: self.__not(2),
-            15: lambda: self.__rmem(2),
-            16: lambda: self.__wmem(2),
-            17: lambda: self.__call(1),
-            18: lambda: self.__ret(0),
-            19: lambda: self.__out(1),
-            20: lambda: self.__input(1),
-            21: self.__noop
+            0:  (self.__terminate, 0),
+            1:  (self.__set,  2),
+            2:  (self.__push, 1),
+            3:  (self.__pop,  1),
+            4:  (self.__equal_to, 3),
+            5:  (self.__greater,  3),
+            6:  (self.__jump,     1),
+            7:  (self.__jump_to,  2),
+            8:  (self.__jump_if,  2),
+            9:  (self.__arithmetic, (3, "add")),
+            10: (self.__arithmetic, (3, "mul")),
+            11: (self.__arithmetic, (3, "mod")),
+            12: (self.__and_or,     (3, "and")),
+            13: (self.__and_or,     (3, " or")),
+            14: (self.__not,   2),
+            15: (self.__rmem,  2),
+            16: (self.__wmem,  2),
+            17: (self.__call,  1),
+            18: (self.__ret,   0),
+            19: (self.__out,   1),
+            20: (self.__input, 1),
+            21: (self.__noop,  0)
         }
 
-    def get_num(self, val):
-        """Validate number"""
+    def resolve(self, val):
         if 0 <= val <= 32767:
-            sel_val = val
+            return val
         elif 32768 <= val <= 32775:
-            sel_val = self.__mod_math(val)
-            # print(val, sel_val, self.registers[sel_val])
-        elif 32776 <= val <= 65535:
-            raise ValueError(f"Number {val} is invalid.")
-        return sel_val
+            return self.registers[val - self.MODULUS]
+        else:
+            raise ValueError(f"Invalid operand: {val}")
 
-    def __mod_math(self, val):
-        """Calculate modular for the number"""
-        return val % self.MODULUS
+    def get_raw(self, val):
+        if 32768 <= val <= 32775:
+            return val - self.MODULUS
+        raise ValueError(f"Expected register (32768-32775), got {val}")
 
-    def __get_args(self, total_args: int, corrected: bool = True):
+    def __get_args(self, total_args: int):
         """Retrieve a list of arguments from memory starting from the current pointer position."""
-        args_list = []
-        for arg_no in range(1, total_args + 1):
-            args = self.memory[self.pointer + arg_no]
-            sel_args = self.get_num(args) if corrected else args
-            args_list.append(sel_args)
-        return args_list[:]
+        return self.memory[self.pointer + 1 : self.pointer + 1 + total_args]
 
-    def __set(self, args_reqd):
+    def set_registers(self, addr, val):
+        """Set register[`addr`] to desired `value`"""
+        self.registers[addr] = val
+
+    def __set(self, args_count):
         """Set register `a` to the value of `b`."""
-        a, b = self.__get_args(args_reqd)
-        self.registers[a] = b
-        info = f"[{self.pointer:05}: SET] reg[{a}] = {b}"
-        self.op_log.append(info)
-        self.pointer += args_reqd + 1
+        a_raw, b_raw = self.__get_args(args_count)
+        a, b = self.get_raw(a_raw), self.resolve(b_raw)
+        self.set_registers(a, b)
+        self.op_log.append(f"[{self.pointer:05}: SET] reg[{a}] = {b}")
+        return args_count
 
-    def __push(self, args_reqd):
+    def __push(self, args_count):
         """Push `a` onto the stack."""
-        a = self.__get_args(args_reqd)[0]
+        a_raw, = self.__get_args(args_count)
+        a = self.resolve(a_raw)
         self.output_stack.append(a)
-        info = f"[{self.pointer:05}: PSH] Pushed Value({a}) onto stack"
-        self.op_log.append(info)
-        self.pointer += args_reqd + 1
+        self.op_log.append(f"[{self.pointer:05}: PSH] Pushed Value({a}) onto stack {a_raw} {a}")
+        return args_count
 
-    def __pop(self, args_reqd):
+    def __pop(self, args_count):
         """Pop from the stack into register `a`. Raises error if empty."""
-        a = self.__mod_math(self.__get_args(args_reqd)[0])
-        pop_val = self.output_stack.pop(0)
-        self.registers[a] = pop_val
-        info = f"[{self.pointer:05}: POP] Pop {pop_val} from stack onto reg[{a}]"
-        self.op_log.append(info)
-        self.pointer += args_reqd + 1
+        if not self.output_stack:
+            raise RuntimeError("Stack is empty")
+        a_raw, = self.__get_args(args_count)
+        a = self.get_raw(a_raw)
+        pop_val = self.output_stack.pop()
+        self.set_registers(a, pop_val)
+        self.op_log.append(f"[{self.pointer:05}: POP] Pop {pop_val} from stack onto reg[{a}]")
+        return args_count
 
-    def __equal_to(self, args_reqd):
+    def __equal_to(self, args_count):
         """Set `a` to 1 if `b == c`, else 0."""
-        a, b, c = self.__get_args(args_reqd)
-        value = int(b == c)
-        self.registers[a] = value
-        condition = "==" if value else "!="
-        info = f"[{self.pointer:05}: EQL] reg[{a}] = {value} (cond: {b} {condition} {c})"
-        self.op_log.append(info)
-        self.pointer += args_reqd + 1
+        a_raw, b_raw, c_raw = self.__get_args(args_count)
+        a = self.get_raw(a_raw)
+        b, c = [self.resolve(i) for i in (b_raw, c_raw)]
+        val = int(b == c)
+        condition = "==" if val else "!="
+        self.set_registers(a, val)
+        self.op_log.append(f"[{self.pointer:05}: EQL] reg[{a}] = {val} (cond: {b} {condition} {c})")
+        return args_count
 
-    def __greater(self, args_reqd):
+    def __greater(self, args_count):
         """Set `a` to 1 if `b > c`, else 0."""
-        a, b, c = self.__get_args(args_reqd)
+        a_raw, b_raw, c_raw = self.__get_args(args_count)
+        a = self.get_raw(a_raw)
+        b, c = [self.resolve(i) for i in (b_raw, c_raw)]
         value = int(b > c)
         self.registers[a] = value
         condition = ">" if value else "<="
-        info = f"[{self.pointer:05}: GRT] reg[{a}] = {value} (cond: {b} {condition} {c})"
-        self.op_log.append(info)
-        self.pointer += args_reqd + 1
+        self.op_log.append(f"[{self.pointer:05}: GRT] reg[{a}] = {value} (cond: {b} {condition} {c})")
+        return args_count
 
-    def set_ip(self, value, push_return_address=False):
-        if push_return_address:
-            self.stack.append(self.ip+2)
-        self.ip = value
-        lambda a: self.set_ip((a)-2),                                 # jmp
-        lambda a, b: self.set_ip((b)-3 if (a) != 0 else self.ip),     # jt
-        lambda a, b: self.set_ip((b)-3 if (a) == 0 else self.ip),     # jf
-
-    def __jump(self, args_reqd):
+    def __jump(self, args_count):
         """Jump to address `a`."""
-        a, = self.__get_args(args_reqd)
-        info = f"[{self.pointer:05}: JMP] Jump pointer to {a:05}"
-        self.op_log.append(info)
+        a_raw, = self.__get_args(args_count)
+        a = self.resolve(a_raw)
+        self.op_log.append(f"[{self.pointer:05}: JMP] Jump pointer to {a:05}")
         self.pointer = a
+        return -1
 
-    def get(self, n):
-        return n if n < self.MODULUS else self.registers[n-self.MODULUS]
-
-    def __jump_to(self, args_reqd):
+    def __jump_to(self, args_count):
         """Jump to `b` if `a` != 0, else proceed."""
-        a_raw, b_raw = self.__get_args(args_reqd, False)
-        # a_val = self.registers[self.get_num(a_raw)]
-        a_val = self.get(a_raw)
-        b_val = self.get(b_raw)
-        if a_val != 0:
-            jump = b_val  # jump target is absolute
-            condition = "!="
-        else:
-            jump = self.pointer + args_reqd + 1  # skip over instruction + args
-            condition = "=="
+        raw_args = self.__get_args(args_count)
+        a, b = [self.resolve(raw) for raw in raw_args]
 
-        info = f"[{self.pointer:05}: JTO] Jump pointer to {jump:05} (cond: {a_val} {condition} 0)"
-        self.op_log.append(info)
+        jump = b if (a != 0) else (self.pointer + args_count +1)
+        condition = "!=" if a != 0 else "=="
+        self.op_log.append(f"[{self.pointer:05}: JNZ] Jump pointer to {jump:05} (cond: {a} {condition} 0)")
         self.pointer = jump
+        return -1
 
-    def __jump_if(self, args_reqd):
+    def __jump_if(self, args_count):
         """Jump to `b` if `a` == 0, else proceed."""
-        a, b = self.__get_args(args_reqd)
-        jump = b if a == 0 else (self.pointer + args_reqd +1)
-        condition = "==" if a == 0 else "!="
-        info = f"[{self.pointer:05}: JIF] Jump pointer to {jump:05} (cond: {a} {condition} 0)"
-        self.op_log.append(info)
+        raw_args = self.__get_args(args_count)
+        a, b = [self.resolve(raw) for raw in raw_args]
+
+        jump = b if (a == 0) else (self.pointer + args_count +1)
+        condition = "==" if (a == 0) else "!="
+        self.op_log.append(f"[{self.pointer:05}: JFZ] Jump pointer to {jump:05} (cond: {a} {condition} 0)")
         self.pointer = jump
+        return -1
 
-    def __arithmetic(self, args_reqd, operation):
+    def __arithmetic(self, func_args):
         """Aritmethic Operation: `add`, `mul`, and `mod`"""
-        op_sign = {'add':'+', 'mul':'x', 'mod':'%'}[operation]
-        a, b, c = self.__get_args(args_reqd)
-        if operation == "add":
-            value = self.__mod_math(b + c)
-        elif operation == "mul":
-            value = self.__mod_math(b * c)
-        elif operation == "mod":
+        args_count, op_type = func_args
+        op_sign = {'add':'+', 'mul':'x', 'mod':'%'}[op_type]
+        a_raw, b_raw, c_raw = self.__get_args(args_count)
+        a = self.get_raw(a_raw)
+        b, c = [self.resolve(i) for i in (b_raw, c_raw)]
+        if op_type == "add":
+            value = (b + c) % self.MODULUS
+        elif op_type == "mul":
+            value = (b * c) % self.MODULUS
+        elif op_type == "mod":
             value = (b % c)
-        self.registers[a] = value
-        info = f"[{self.pointer:05}: {operation.upper()}] reg[{a}] = {value} (eq: {b} {op_sign} {c})"
+        self.set_registers(a, value)
+        info = f"[{self.pointer:05}: {op_type.upper()}] reg[{a}] = {value} (eq: {b} {op_sign} {c})"
         self.op_log.append(info)
-        self.pointer += args_reqd + 1
+        return args_count
 
-    def __and_or(self, args_reqd, op_type):
+    def __and_or(self, func_args):
         """Bitwise `and`|`or` operations for values `b` and `c`"""
+        args_count, op_type = func_args
         op_sign = {'and':'&', ' or':'|'}[op_type]
-        a, b, c = self.__get_args(args_reqd)
+        a_raw, b_raw, c_raw = self.__get_args(args_count)
+        a = self.get_raw(a_raw)
+        b, c = [self.resolve(i) for i in (b_raw, c_raw)]
         if op_type == "and":
             value = b & c
         elif op_type == " or":
             value = b | c
-        self.registers[a] = value
-        info = f"[{self.pointer:05}: {op_type.upper()}] reg[{a}] = {value} (bit_op: {b} {op_sign} {c}) "
-        self.op_log.append(info)
-        self.pointer += args_reqd + 1
+        self.set_registers(a, value)
+        self.op_log.append(f"[{self.pointer:05}: {op_type.upper()}] reg[{a}] = {value} (bit_op: {b} {op_sign} {c})")
+        return args_count
 
-    def __not(self, args_reqd):
+    def __not(self, args_count):
         """Stores 15-bit bitwise inverse of `b` in `a`"""
-        a, b = self.__get_args(args_reqd)
+        a_raw, b_raw = self.__get_args(args_count)
+        a, b = self.get_raw(a_raw), self.resolve(b_raw)
         inv_bits = (~b) & (self.MODULUS - 1)       # Invert and mask to 15 bits
-        self.registers[a] = inv_bits
-        info = f"[{self.pointer:05}: NOT] reg[{a}] = {inv_bits} (15 bit inverse of {b} stored)"
-        self.op_log.append(info)
-        self.pointer += args_reqd + 1
+        self.set_registers(a, inv_bits)
+        self.op_log.append("[{self.pointer:05}: NOT] reg[{a}] = {inv_bits} (15 bit inverse of {b} stored)")
+        return args_count
 
-    def __rmem(self, args_reqd):
+    def __rmem(self, args_count):
         """Read Memory at address `b` and write it `a`"""
-        a, b = self.__get_args(args_reqd)
-        self.registers[a] = self.memory[b]
-        info = f"[{self.pointer:05}: RME] reg[{a}] = {self.memory[b]}"
-        self.op_log.append(info)
-        self.pointer += args_reqd + 1
+        a_raw, b_raw = self.__get_args(args_count)
+        a, b = self.get_raw(a_raw), self.resolve(b_raw)
+        value = self.memory[b]
+        self.set_registers(a, value)
+        self.op_log.append(f"[{self.pointer:05}: RDM] reg[{a}] = {self.memory[b]}")
+        return args_count
 
-    def __wmem(self, args_reqd):
+    def __wmem(self, args_count):
         """Write value from `b` into memory address at `a`"""
-        a, b = self.__get_args(args_reqd)
-        self.memory[a] = b
-        info = f"[{self.pointer:05}: WME] Write to memory at a({a}) with value {b}"
-        self.op_log.append(info)
-        self.pointer += args_reqd + 1
+        raw_args = self.__get_args(args_count)
+        a, b = [self.resolve(raw) for raw in raw_args]
 
-    def __call(self, args_reqd):
+        self.memory[a] = b
+        self.op_log.append(f"[{self.pointer:05}: WRM] Write to memory at a({a}) with value {b}")
+        return args_count
+
+    def __call(self, args_count):
         """Write the address of the next instruction
             to the stack and jump to `a`"""
-        a = self.__get_args(args_reqd)
-        info = f"[{self.pointer:05}: CAL] "
-        self.op_log.append(info)
-        self.pointer += args_reqd + 1
+        a_raw, = self.__get_args(args_count)
+        a = self.resolve(a_raw)
+        stack_val = self.pointer + args_count + 1
+        self.output_stack.append(stack_val)
+        self.op_log.append(f"[{self.pointer:05}: CAL] Call to {a}, return to {stack_val}")
+        self.pointer = a
+        return -1
 
-    def __ret(self, args_reqd):
+    def __ret(self, _):
         """Remove the top element from the stack and jump to it; empty stack = halt"""
-        info = f"[{self.pointer:05}: RET] "
-        self.op_log.append(info)
-        self.pointer += args_reqd + 1
+        if not self.output_stack:
+            self.__terminate()
+        ret_addr = self.output_stack.pop()
+        self.op_log.append(f"[{self.pointer:05}: RET] Return to {ret_addr}")
+        self.pointer = ret_addr
+        return -1
 
-    def __out(self, args_reqd):
+    def __out(self, args_count):
         """Write the character represented by ascii code `a` to the terminal"""
-        a,  = self.__get_args(args_reqd)
+        a_raw,  = self.__get_args(args_count)
+        a = self.resolve(a_raw)
         char_a = chr(a)
         self.output_terminal[-1] += char_a
-        info = f"[{self.pointer:05}: OUT] {repr(char_a)} goes to output terminal"
-        self.op_log.append(info)
-        self.pointer += args_reqd + 1
+        self.op_log.append(f"[{self.pointer:05}: OUT] {a} -> {repr(char_a)} to terminal")
+        return args_count
 
-    def __input(self, args_reqd):
+    def __input(self, args_count):
         """Read a character from the terminal and write its ascii code to `a`"""
-        a,  = self.__get_args(args_reqd)
+        if not self.input_terminal:
+            self.paused = True
+            self.op_log.append(f"[{self.pointer:05}: INP] Empty Input | Pause Computer)")
+            return 0
+        a_raw,  = self.__get_args(args_count)
+        a = self.get_raw(a_raw)
         input_char = self.input_terminal.pop(0)
         input_ascii = ord(input_char)
-        self.registers[a] = input_ascii
-        info = f"[{self.pointer:05}: INP] reg[{a}] = {input_ascii} ({input_char} -> {input_ascii})"
-        self.op_log.append(info)
-        self.pointer += args_reqd + 1
+        self.set_registers(a, input_ascii)
+        self.op_log.append(f"[{self.pointer:05}: INP] reg[{a}] = {input_ascii} ({input_char} -> {input_ascii})")
+        return args_count
 
-    def __noop(self):
+    def __noop(self, _):
         """No Operation"""
-        info = f"[{self.pointer:05}: NOP] No Operation Performed"
-        self.op_log.append(info)
-        self.pointer += 1
+        self.op_log.append(f"[{self.pointer:05}: NOP] No Operation Performed")
+        return 0
 
-    def __terminate(self):
+    def __terminate(self, _):
         """ Stop Execution and Terminate the program. """
+        self.op_log.append(f"[{self.pointer:05}: HALT] __PROGRAM TERMINATED__")
         self.running = False
-        info = f"[{self.pointer:05}: HALT] __PROGRAM TERMINATED__"
-        self.op_log.append(info)
+        return 0
 
     def run_computer(self, input_commands = []):
-        self.input_terminal = input_commands[:]
 
         while self.running and not self.paused:
             opcode = self.memory[self.pointer]
@@ -289,8 +286,16 @@ class VirtualMachine:
             if opcode not in self.opcode_map:
                 raise ValueError(f"Unknown opcode {opcode} at position {self.pointer}")
 
-            self.opcode_map[opcode]()  # Execute the corresponding operation
+            op_fn, func_args = self.opcode_map[opcode]
+            move_ip = op_fn(func_args)
+            self.pointer += move_ip + 1
+
             if self.debug:
                 print(self.op_log[-1])
-        print(self.output_terminal[-1])
-        return
+        return self.output_terminal
+
+    def save_log(self, file_name = "vm_log"):
+        """Save log to a .txt file"""
+        with open(f"{file_name}.txt", "w") as f:
+            for item in self.op_log:
+                f.write(f"{item}\n")
