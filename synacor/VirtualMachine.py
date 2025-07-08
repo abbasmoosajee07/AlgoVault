@@ -235,12 +235,24 @@ class VirtualMachine:
         self.op_log.append(f"[{self.pointer:05}: OUT]{repr(char_a)} to terminal (ASCII Code: {a})")
         return args_count
 
+    def add_input(self, input_commands: list):
+        """Add input commands to the VM's input commands queue."""
+        if isinstance(input_commands, list):
+            input_commands = '\n'.join(input_commands)
+        else:
+            input_commands = [input_commands]
+
+        self.input_commands.extend(input_commands)
+        self.output_terminal.append("")
+        self.paused = False
+        self.op_log.append(f"[ADD INPUTS] Add series of commands to input commands queue")
+
     def __input(self, args_count):
         """[20]: Read a character from the terminal and write its ascii code to `a`"""
         if not self.input_commands:
             self.paused = True
             self.op_log.append(f"[{self.pointer:05}: INP] Empty Input | Pause Computer)")
-            return 0
+            return None
         a_raw,  = self.__get_args(args_count)
         a = self.get_reg_no(a_raw)
         input_char = self.input_commands.pop(0)
@@ -256,6 +268,8 @@ class VirtualMachine:
 
     def run_computer(self, input_commands = []):
         """Run Computer with an initial list of commands"""
+        if len(input_commands) >= 1:
+            self.add_input(input_commands)
 
         while self.running and not self.paused:
             opcode = self.memory[self.pointer]
@@ -297,6 +311,5 @@ class VirtualMachine:
         """Save log to a .txt file"""
         import os
         full_path = os.path.join(file_loc, f"{file_name}.txt")
-
         with open(full_path, "w") as f:
             f.write('\n'.join(self.op_log))
