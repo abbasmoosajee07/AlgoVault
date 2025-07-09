@@ -60,7 +60,7 @@ class VirtualMachine:
             return val - self.MODULUS
         raise ValueError(f"Expected register (32768-32775), got {val}")
 
-    def __get_args(self, total_args):
+    def get_args(self, total_args):
         """Retrieve a list of arguments from memory starting from the current pointer position."""
         return self.memory[self.pointer + 1 : self.pointer + 1 + total_args]
 
@@ -68,91 +68,108 @@ class VirtualMachine:
         """Set register[`addr`] to desired `value`"""
         self.registers[addr] = val
 
+    def debug_log(self, message):
+        """If debug is True, add op_message to an operation log"""
+        if self.debug:
+            self.op_log.append(message)
+
+    def add_input(self, input_commands):
+        """Add input commands to the VM's input commands queue."""
+        if isinstance(input_commands, list):
+            input_commands = '\n'.join(input_commands)
+        else:
+            input_commands = [input_commands]
+
+        self.input_commands.extend(input_commands)
+        self.output_terminal.append("")
+        self.paused = False
+        self.debug_log(f"[ADD INPUTS] Add series of commands to input commands queue")
+
     def __terminate(self, args_count):
         """[00]: Stop Execution and Terminate the program. """
-        self.op_log.append(f"[{self.pointer:05}: HALT] __PROGRAM TERMINATED__")
+        self.debug_log(f"[{self.pointer:05}: HALT] __PROGRAM TERMINATED__")
         self.running = False
         return args_count
 
     def __set(self, args_count):
         """[01]: Set register `a` to the value of `b`."""
-        a_raw, b_raw = self.__get_args(args_count)
+        a_raw, b_raw = self.get_args(args_count)
         a, b = self.get_reg_no(a_raw), self.validate_val(b_raw)
         self.set_registers(a, b)
-        self.op_log.append(f"[{self.pointer:05}: SET] reg[{a}] = {b}")
+        self.debug_log(f"[{self.pointer:05}: SET] reg[{a}] = {b}")
         return args_count
 
     def __push(self, args_count):
         """[02]: Push `a` onto the stack."""
-        a_raw, = self.__get_args(args_count)
+        a_raw, = self.get_args(args_count)
         a = self.validate_val(a_raw)
         self.output_stack.append(a)
-        self.op_log.append(f"[{self.pointer:05}: PSH] Pushed Value({a}) onto stack {a_raw} {a}")
+        self.debug_log(f"[{self.pointer:05}: PSH] Pushed Value({a}) onto stack {a_raw} {a}")
         return args_count
 
     def __pop(self, args_count):
         """[03]: Pop from the stack into register `a`. Raises error if empty."""
         if not self.output_stack:
             raise RuntimeError("Stack is empty")
-        a_raw, = self.__get_args(args_count)
+        a_raw, = self.get_args(args_count)
         a = self.get_reg_no(a_raw)
         pop_val = self.output_stack.pop()
         self.set_registers(a, pop_val)
-        self.op_log.append(f"[{self.pointer:05}: POP] Pop {pop_val} from stack onto reg[{a}]")
+        self.debug_log(f"[{self.pointer:05}: POP] Pop {pop_val} from stack onto reg[{a}]")
         return args_count
 
     def __equal_to(self, args_count):
         """[04]: Set `a` to 1 if `b == c`, else 0."""
-        a_raw, b_raw, c_raw = self.__get_args(args_count)
+        a_raw, b_raw, c_raw = self.get_args(args_count)
         a = self.get_reg_no(a_raw)
         b, c = [self.validate_val(i) for i in (b_raw, c_raw)]
         val = int(b == c)
         condition = "==" if val else "!="
         self.set_registers(a, val)
-        self.op_log.append(f"[{self.pointer:05}: EQL] reg[{a}] = {val} (cond: {b} {condition} {c})")
+        self.debug_log(f"[{self.pointer:05}: EQL] reg[{a}] = {val} (cond: {b} {condition} {c})")
         return args_count
 
     def __greater(self, args_count):
         """[05]: Set `a` to 1 if `b > c`, else 0."""
-        a_raw, b_raw, c_raw = self.__get_args(args_count)
+        a_raw, b_raw, c_raw = self.get_args(args_count)
         a = self.get_reg_no(a_raw)
         b, c = [self.validate_val(i) for i in (b_raw, c_raw)]
         val = int(b > c)
         self.set_registers(a, val)
         condition = ">" if val else "<="
-        self.op_log.append(f"[{self.pointer:05}: GRT] reg[{a}] = {val} (cond: {b} {condition} {c})")
+        self.debug_log(f"[{self.pointer:05}: GRT] reg[{a}] = {val} (cond: {b} {condition} {c})")
         return args_count
 
     def __jump(self, args_count):
         """[06]: Jump to address `a`."""
-        a_raw, = self.__get_args(args_count)
+        a_raw, = self.get_args(args_count)
         a = self.validate_val(a_raw)
-        self.op_log.append(f"[{self.pointer:05}: JMP] Jump pointer to {a:05}")
+        self.debug_log(f"[{self.pointer:05}: JMP] Jump pointer to {a:05}")
         self.pointer = a
 
     def __jump_to(self, args_count):
         """[07]: Jump to `b` if `a` != 0, else proceed."""
-        raw_args = self.__get_args(args_count)
+        raw_args = self.get_args(args_count)
         a, b = [self.validate_val(raw) for raw in raw_args]
         jump = b if (a != 0) else (self.pointer + args_count +1)
         condition = "!=" if a != 0 else "=="
-        self.op_log.append(f"[{self.pointer:05}: JNZ] Jump pointer to {jump:05} (cond: {a} {condition} 0)")
+        self.debug_log(f"[{self.pointer:05}: JNZ] Jump pointer to {jump:05} (cond: {a} {condition} 0)")
         self.pointer = jump
 
     def __jump_if(self, args_count):
         """[08]: Jump to `b` if `a` == 0, else proceed."""
-        raw_args = self.__get_args(args_count)
+        raw_args = self.get_args(args_count)
         a, b = [self.validate_val(raw) for raw in raw_args]
         jump = b if (a == 0) else (self.pointer + args_count +1)
         condition = "==" if (a == 0) else "!="
-        self.op_log.append(f"[{self.pointer:05}: JFZ] Jump pointer to {jump:05} (cond: {a} {condition} 0)")
+        self.debug_log(f"[{self.pointer:05}: JFZ] Jump pointer to {jump:05} (cond: {a} {condition} 0)")
         self.pointer = jump
 
     def __arithmetic(self, func_args):
         """[09, 10, 11]: Aritmethic Operation `add`, `mul`, and `mod`"""
         args_count, op_type = func_args
         op_sign = {'add':'+', 'mul':'x', 'mod':'%'}[op_type]
-        a_raw, b_raw, c_raw = self.__get_args(args_count)
+        a_raw, b_raw, c_raw = self.get_args(args_count)
         a = self.get_reg_no(a_raw)
         b, c = [self.validate_val(i) for i in (b_raw, c_raw)]
         if op_type == "add":
@@ -163,14 +180,14 @@ class VirtualMachine:
             val = (b % c)
         self.set_registers(a, val)
         info = f"[{self.pointer:05}: {op_type.upper()}] reg[{a}] = {val} (eq: {b} {op_sign} {c})"
-        self.op_log.append(info)
+        self.debug_log(info)
         return args_count
 
     def __and_or(self, func_args):
         """[12, 13]: Bitwise `and`|`or` operations for values `b` and `c`"""
         args_count, op_type = func_args
         op_sign = {'and':'&', 'or':'|'}[op_type]
-        a_raw, b_raw, c_raw = self.__get_args(args_count)
+        a_raw, b_raw, c_raw = self.get_args(args_count)
         a = self.get_reg_no(a_raw)
         b, c = [self.validate_val(i) for i in (b_raw, c_raw)]
         if op_type == "and":
@@ -179,101 +196,88 @@ class VirtualMachine:
             val = b | c
             op_type += " "
         self.set_registers(a, val)
-        self.op_log.append(f"[{self.pointer:05}: {op_type.upper()}] reg[{a}] = {val} (bit_op: {b} {op_sign} {c})")
+        self.debug_log(f"[{self.pointer:05}: {op_type.upper()}] reg[{a}] = {val} (bit_op: {b} {op_sign} {c})")
         return args_count
 
     def __not(self, args_count):
         """[14]: Stores 15-bit bitwise inverse of `b` in `a`"""
-        a_raw, b_raw = self.__get_args(args_count)
+        a_raw, b_raw = self.get_args(args_count)
         a, b = self.get_reg_no(a_raw), self.validate_val(b_raw)
         inv_bits = (~b) & (self.MODULUS - 1)       # Invert and mask to 15 bits
         self.set_registers(a, inv_bits)
-        self.op_log.append(f"[{self.pointer:05}: NOT] reg[{a}] = {inv_bits} (15 bit inverse of {b} stored)")
+        self.debug_log(f"[{self.pointer:05}: NOT] reg[{a}] = {inv_bits} (15 bit inverse of {b} stored)")
         return args_count
 
     def __rmem(self, args_count):
         """[15]: Read Memory at address `b` and write it `a`"""
-        a_raw, b_raw = self.__get_args(args_count)
+        a_raw, b_raw = self.get_args(args_count)
         a, b = self.get_reg_no(a_raw), self.validate_val(b_raw)
         val = self.memory[b]
         self.set_registers(a, val)
-        self.op_log.append(f"[{self.pointer:05}: RDM] reg[{a}] = {val}")
+        self.debug_log(f"[{self.pointer:05}: RDM] reg[{a}] = {val}")
         return args_count
 
     def __wmem(self, args_count):
         """[16]: Write val from `b` into memory address at `a`"""
-        raw_args = self.__get_args(args_count)
+        raw_args = self.get_args(args_count)
         a, b = [self.validate_val(raw) for raw in raw_args]
         self.memory[a] = b
-        self.op_log.append(f"[{self.pointer:05}: WRM] Write to memory at a({a}) with value {b}")
+        self.debug_log(f"[{self.pointer:05}: WRM] Write to memory at a({a}) with value {b}")
         return args_count
 
     def __call(self, args_count):
         """[17]: Write the address of the next instruction to the stack and jump to `a`"""
-        a_raw, = self.__get_args(args_count)
+        a_raw, = self.get_args(args_count)
         a = self.validate_val(a_raw)
         stack_val = self.pointer + args_count + 1
         self.output_stack.append(stack_val)
-        self.op_log.append(f"[{self.pointer:05}: CAL] Call to {a}, return to {stack_val}")
+        self.debug_log(f"[{self.pointer:05}: CAL] Call to {a}, return to {stack_val}")
         self.pointer = a
 
     def __ret(self, args_count):
         """[18]: Remove the top element from the stack and jump to it; empty stack = halt"""
         if not self.output_stack:
-            self.op_log.append(f"[{self.pointer:05}: RET]  EMPTY OUTPUT STACK")
+            self.debug_log(f"[{self.pointer:05}: RET]  EMPTY OUTPUT STACK")
             self.__terminate(args_count)
         ret_addr = self.output_stack.pop()
-        self.op_log.append(f"[{self.pointer:05}: RET] Return to {ret_addr}")
+        self.debug_log(f"[{self.pointer:05}: RET] Return to {ret_addr}")
         self.pointer = ret_addr
 
     def __out(self, args_count):
         """[19]: Write the character represented by ascii code `a` to the terminal"""
-        a_raw,  = self.__get_args(args_count)
+        a_raw,  = self.get_args(args_count)
         a = self.validate_val(a_raw)
         char_a = chr(a)
         self.output_terminal[-1] += char_a
-        self.op_log.append(f"[{self.pointer:05}: OUT]{repr(char_a)} to terminal (ASCII Code: {a})")
+        self.debug_log(f"[{self.pointer:05}: OUT]{repr(char_a)} to terminal (ASCII Code: {a})")
         return args_count
-
-    def add_input(self, input_commands: list):
-        """Add input commands to the VM's input commands queue."""
-        if isinstance(input_commands, list):
-            input_commands = '\n'.join(input_commands)
-        else:
-            input_commands = [input_commands]
-
-        self.input_commands.extend(input_commands)
-        self.output_terminal.append("")
-        self.paused = False
-        self.op_log.append(f"[ADD INPUTS] Add series of commands to input commands queue")
 
     def __input(self, args_count):
         """[20]: Read a character from the terminal and write its ascii code to `a`"""
         if not self.input_commands:
             self.paused = True
-            self.op_log.append(f"[{self.pointer:05}: INP] Empty Input | Pause Computer)")
+            self.debug_log(f"[{self.pointer:05}: INP] Empty Input | Pause Computer)")
             return None
-        a_raw,  = self.__get_args(args_count)
+        a_raw,  = self.get_args(args_count)
         a = self.get_reg_no(a_raw)
         input_char = self.input_commands.pop(0)
         input_ascii = ord(input_char)
         self.set_registers(a, input_ascii)
-        self.op_log.append(f"[{self.pointer:05}: INP] reg[{a}] = {input_ascii} ({input_char} -> {input_ascii})")
+        self.debug_log(f"[{self.pointer:05}: INP] reg[{a}] = {input_ascii} ({input_char} -> {input_ascii})")
         return args_count
 
     def __noop(self, args_count):
         """[21]: No Operation"""
-        self.op_log.append(f"[{self.pointer:05}: NOP] No Operation Performed")
+        self.debug_log(f"[{self.pointer:05}: NOP] No Operation Performed")
         return args_count
 
     def run_computer(self, input_commands = []):
         """Run Computer with an initial list of commands"""
-        if len(input_commands) >= 1:
-            self.add_input(input_commands)
+        if input_commands:
+            self.add_input(input_commands + [""])
 
         while self.running and not self.paused:
             opcode = self.memory[self.pointer]
-
             if opcode not in self.opcode_map:
                 raise ValueError(f"Unknown opcode {opcode} at position {self.pointer}")
 
@@ -282,11 +286,9 @@ class VirtualMachine:
             if move_ip is not None:
                 self.pointer += move_ip + 1
 
-            if self.debug:
-                print(self.op_log[-1])
         return self.output_terminal
 
-    def replicate(self, copy_no: int = 1):
+    def replicate(self, copy_no = 1):
         """Create and return a copy of the current VirtualMachine instance, preserving its state."""
         # Create a new instance with the original program bytes
         new_vm = VirtualMachine(self.program_bytes, debug=self.debug)
@@ -303,7 +305,7 @@ class VirtualMachine:
 
         # Copy operation log and add replication marker
         new_vm.op_log = self.op_log.copy()
-        new_vm.op_log.append(f"[{copy_no:05}_COPY] __REPLICATED VM AT CURRENT STATE__")
+        new_vm.debug_log(f"[{copy_no:05}_COPY] __REPLICATED VM AT CURRENT STATE__")
 
         return new_vm
 
