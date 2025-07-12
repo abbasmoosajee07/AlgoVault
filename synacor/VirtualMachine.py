@@ -8,6 +8,7 @@ class VirtualMachine:
         self.debug = debug                    # Enables debug logging
         self.paused = False                   # Indicates if execution is paused (waiting for input)
         self.running = True                   # Indicates if the VM is running
+        self.version_no = 0
 
         # State components
         self.memory = [0] * self.MODULUS      # Memory: 15-bit address space 32K words of 16-bit values
@@ -49,41 +50,24 @@ class VirtualMachine:
             21: (self.__noop,  0)
         }
 
-    def validate_val(self, val):
+    def __validate_val(self, val):
         if 0 <= val <= 32767:
             return val
         else:
-            return self.registers[self.get_reg_no(val)]
+            return self.registers[self.__get_reg_no(val)]
 
-    def get_reg_no(self, val):
+    def __get_reg_no(self, val):
         if 32768 <= val <= 32775:
             return val - self.MODULUS
         raise ValueError(f"Expected register (32768-32775), got {val}")
 
-    def get_args(self, total_args):
+    def __get_args(self, total_args):
         """Retrieve a list of arguments from memory starting from the current pointer position."""
         return self.memory[self.pointer + 1 : self.pointer + 1 + total_args]
 
-    def set_registers(self, addr, val):
+    def __set_registers(self, addr, val):
         """Set register[`addr`] to desired `value`"""
         self.registers[addr] = val
-
-    def debug_log(self, message):
-        """If debug is True, add op_message to an operation log"""
-        if self.debug:
-            self.op_log.append(message)
-
-    def add_input(self, input_commands):
-        """Add input commands to the VM's input commands queue."""
-        if isinstance(input_commands, list):
-            input_commands = '\n'.join(input_commands)
-        else:
-            input_commands = [input_commands]
-
-        self.input_commands.extend(input_commands)
-        self.output_terminal.append("")
-        self.paused = False
-        self.debug_log(f"[ADD INPUTS] Add series of commands to input commands queue")
 
     def __terminate(self, args_count):
         """[00]: Stop Execution and Terminate the program. """
@@ -93,16 +77,16 @@ class VirtualMachine:
 
     def __set(self, args_count):
         """[01]: Set register `a` to the value of `b`."""
-        a_raw, b_raw = self.get_args(args_count)
-        a, b = self.get_reg_no(a_raw), self.validate_val(b_raw)
-        self.set_registers(a, b)
+        a_raw, b_raw = self.__get_args(args_count)
+        a, b = self.__get_reg_no(a_raw), self.__validate_val(b_raw)
+        self.__set_registers(a, b)
         self.debug_log(f"[{self.pointer:05}: SET] reg[{a}] = {b}")
         return args_count
 
     def __push(self, args_count):
         """[02]: Push `a` onto the stack."""
-        a_raw, = self.get_args(args_count)
-        a = self.validate_val(a_raw)
+        a_raw, = self.__get_args(args_count)
+        a = self.__validate_val(a_raw)
         self.output_stack.append(a)
         self.debug_log(f"[{self.pointer:05}: PSH] Pushed Value({a}) onto stack {a_raw} {a}")
         return args_count
@@ -111,46 +95,46 @@ class VirtualMachine:
         """[03]: Pop from the stack into register `a`. Raises error if empty."""
         if not self.output_stack:
             raise RuntimeError("Stack is empty")
-        a_raw, = self.get_args(args_count)
-        a = self.get_reg_no(a_raw)
+        a_raw, = self.__get_args(args_count)
+        a = self.__get_reg_no(a_raw)
         pop_val = self.output_stack.pop()
-        self.set_registers(a, pop_val)
+        self.__set_registers(a, pop_val)
         self.debug_log(f"[{self.pointer:05}: POP] Pop {pop_val} from stack onto reg[{a}]")
         return args_count
 
     def __equal_to(self, args_count):
         """[04]: Set `a` to 1 if `b == c`, else 0."""
-        a_raw, b_raw, c_raw = self.get_args(args_count)
-        a = self.get_reg_no(a_raw)
-        b, c = [self.validate_val(i) for i in (b_raw, c_raw)]
+        a_raw, b_raw, c_raw = self.__get_args(args_count)
+        a = self.__get_reg_no(a_raw)
+        b, c = [self.__validate_val(i) for i in (b_raw, c_raw)]
         val = int(b == c)
         condition = "==" if val else "!="
-        self.set_registers(a, val)
+        self.__set_registers(a, val)
         self.debug_log(f"[{self.pointer:05}: EQL] reg[{a}] = {val} (cond: {b} {condition} {c})")
         return args_count
 
     def __greater(self, args_count):
         """[05]: Set `a` to 1 if `b > c`, else 0."""
-        a_raw, b_raw, c_raw = self.get_args(args_count)
-        a = self.get_reg_no(a_raw)
-        b, c = [self.validate_val(i) for i in (b_raw, c_raw)]
+        a_raw, b_raw, c_raw = self.__get_args(args_count)
+        a = self.__get_reg_no(a_raw)
+        b, c = [self.__validate_val(i) for i in (b_raw, c_raw)]
         val = int(b > c)
-        self.set_registers(a, val)
+        self.__set_registers(a, val)
         condition = ">" if val else "<="
         self.debug_log(f"[{self.pointer:05}: GRT] reg[{a}] = {val} (cond: {b} {condition} {c})")
         return args_count
 
     def __jump(self, args_count):
         """[06]: Jump to address `a`."""
-        a_raw, = self.get_args(args_count)
-        a = self.validate_val(a_raw)
+        a_raw, = self.__get_args(args_count)
+        a = self.__validate_val(a_raw)
         self.debug_log(f"[{self.pointer:05}: JMP] Jump pointer to {a:05}")
         self.pointer = a
 
     def __jump_to(self, args_count):
         """[07]: Jump to `b` if `a` != 0, else proceed."""
-        raw_args = self.get_args(args_count)
-        a, b = [self.validate_val(raw) for raw in raw_args]
+        raw_args = self.__get_args(args_count)
+        a, b = [self.__validate_val(raw) for raw in raw_args]
         jump = b if (a != 0) else (self.pointer + args_count +1)
         condition = "!=" if a != 0 else "=="
         self.debug_log(f"[{self.pointer:05}: JNZ] Jump pointer to {jump:05} (cond: {a} {condition} 0)")
@@ -158,8 +142,8 @@ class VirtualMachine:
 
     def __jump_if(self, args_count):
         """[08]: Jump to `b` if `a` == 0, else proceed."""
-        raw_args = self.get_args(args_count)
-        a, b = [self.validate_val(raw) for raw in raw_args]
+        raw_args = self.__get_args(args_count)
+        a, b = [self.__validate_val(raw) for raw in raw_args]
         jump = b if (a == 0) else (self.pointer + args_count +1)
         condition = "==" if (a == 0) else "!="
         self.debug_log(f"[{self.pointer:05}: JFZ] Jump pointer to {jump:05} (cond: {a} {condition} 0)")
@@ -169,16 +153,16 @@ class VirtualMachine:
         """[09, 10, 11]: Aritmethic Operation `add`, `mul`, and `mod`"""
         args_count, op_type = func_args
         op_sign = {'add':'+', 'mul':'x', 'mod':'%'}[op_type]
-        a_raw, b_raw, c_raw = self.get_args(args_count)
-        a = self.get_reg_no(a_raw)
-        b, c = [self.validate_val(i) for i in (b_raw, c_raw)]
+        a_raw, b_raw, c_raw = self.__get_args(args_count)
+        a = self.__get_reg_no(a_raw)
+        b, c = [self.__validate_val(i) for i in (b_raw, c_raw)]
         if op_type == "add":
             val = (b + c) % self.MODULUS
         elif op_type == "mul":
             val = (b * c) % self.MODULUS
         elif op_type == "mod":
             val = (b % c)
-        self.set_registers(a, val)
+        self.__set_registers(a, val)
         info = f"[{self.pointer:05}: {op_type.upper()}] reg[{a}] = {val} (eq: {b} {op_sign} {c})"
         self.debug_log(info)
         return args_count
@@ -187,48 +171,48 @@ class VirtualMachine:
         """[12, 13]: Bitwise `and`|`or` operations for values `b` and `c`"""
         args_count, op_type = func_args
         op_sign = {'and':'&', 'or':'|'}[op_type]
-        a_raw, b_raw, c_raw = self.get_args(args_count)
-        a = self.get_reg_no(a_raw)
-        b, c = [self.validate_val(i) for i in (b_raw, c_raw)]
+        a_raw, b_raw, c_raw = self.__get_args(args_count)
+        a = self.__get_reg_no(a_raw)
+        b, c = [self.__validate_val(i) for i in (b_raw, c_raw)]
         if op_type == "and":
             val = b & c
         elif op_type == "or":
             val = b | c
             op_type += " "
-        self.set_registers(a, val)
+        self.__set_registers(a, val)
         self.debug_log(f"[{self.pointer:05}: {op_type.upper()}] reg[{a}] = {val} (bit_op: {b} {op_sign} {c})")
         return args_count
 
     def __not(self, args_count):
         """[14]: Stores 15-bit bitwise inverse of `b` in `a`"""
-        a_raw, b_raw = self.get_args(args_count)
-        a, b = self.get_reg_no(a_raw), self.validate_val(b_raw)
+        a_raw, b_raw = self.__get_args(args_count)
+        a, b = self.__get_reg_no(a_raw), self.__validate_val(b_raw)
         inv_bits = (~b) & (self.MODULUS - 1)       # Invert and mask to 15 bits
-        self.set_registers(a, inv_bits)
+        self.__set_registers(a, inv_bits)
         self.debug_log(f"[{self.pointer:05}: NOT] reg[{a}] = {inv_bits} (15 bit inverse of {b} stored)")
         return args_count
 
     def __rmem(self, args_count):
         """[15]: Read Memory at address `b` and write it `a`"""
-        a_raw, b_raw = self.get_args(args_count)
-        a, b = self.get_reg_no(a_raw), self.validate_val(b_raw)
+        a_raw, b_raw = self.__get_args(args_count)
+        a, b = self.__get_reg_no(a_raw), self.__validate_val(b_raw)
         val = self.memory[b]
-        self.set_registers(a, val)
+        self.__set_registers(a, val)
         self.debug_log(f"[{self.pointer:05}: RDM] reg[{a}] = {val}")
         return args_count
 
     def __wmem(self, args_count):
         """[16]: Write val from `b` into memory address at `a`"""
-        raw_args = self.get_args(args_count)
-        a, b = [self.validate_val(raw) for raw in raw_args]
+        raw_args = self.__get_args(args_count)
+        a, b = [self.__validate_val(raw) for raw in raw_args]
         self.memory[a] = b
         self.debug_log(f"[{self.pointer:05}: WRM] Write to memory at a({a}) with value {b}")
         return args_count
 
     def __call(self, args_count):
         """[17]: Write the address of the next instruction to the stack and jump to `a`"""
-        a_raw, = self.get_args(args_count)
-        a = self.validate_val(a_raw)
+        a_raw, = self.__get_args(args_count)
+        a = self.__validate_val(a_raw)
         stack_val = self.pointer + args_count + 1
         self.output_stack.append(stack_val)
         self.debug_log(f"[{self.pointer:05}: CAL] Call to {a}, return to {stack_val}")
@@ -245,8 +229,8 @@ class VirtualMachine:
 
     def __out(self, args_count):
         """[19]: Write the character represented by ascii code `a` to the terminal"""
-        a_raw,  = self.get_args(args_count)
-        a = self.validate_val(a_raw)
+        a_raw,  = self.__get_args(args_count)
+        a = self.__validate_val(a_raw)
         char_a = chr(a)
         self.output_terminal[-1] += char_a
         self.debug_log(f"[{self.pointer:05}: OUT]{repr(char_a)} to terminal (ASCII Code: {a})")
@@ -258,11 +242,11 @@ class VirtualMachine:
             self.paused = True
             self.debug_log(f"[{self.pointer:05}: INP] Empty Input | Pause Computer)")
             return None
-        a_raw,  = self.get_args(args_count)
-        a = self.get_reg_no(a_raw)
+        a_raw,  = self.__get_args(args_count)
+        a = self.__get_reg_no(a_raw)
         input_char = self.input_commands.pop(0)
         input_ascii = ord(input_char)
-        self.set_registers(a, input_ascii)
+        self.__set_registers(a, input_ascii)
         self.debug_log(f"[{self.pointer:05}: INP] reg[{a}] = {input_ascii} ({input_char} -> {input_ascii})")
         return args_count
 
@@ -270,6 +254,52 @@ class VirtualMachine:
         """[21]: No Operation"""
         self.debug_log(f"[{self.pointer:05}: NOP] No Operation Performed")
         return args_count
+
+    def replicate(self, copy_no = 1):
+        """Create and return a copy of the current VirtualMachine instance, preserving its state."""
+        # Create a new instance with the original program bytes
+        new_vm = VirtualMachine(self.program_bytes, debug=self.debug)
+
+        # Deep copy the current VM state
+        new_vm.paused = self.paused
+        new_vm.running = self.running
+        new_vm.pointer = self.pointer
+        new_vm.memory  = self.memory.copy()
+        new_vm.registers = self.registers.copy()
+        new_vm.output_stack = self.output_stack.copy()
+        new_vm.input_commands = self.input_commands.copy()
+        new_vm.output_terminal = self.output_terminal.copy()
+        new_vm.version_no = copy_no
+
+        # Copy operation log and add replication marker
+        new_vm.op_log = self.op_log.copy()
+        new_vm.debug_log(f"[{new_vm.version_no:05}_COPY] __REPLICATED VM AT CURRENT STATE__")
+
+        return new_vm
+
+    def add_input(self, input_commands):
+        """Add input commands to the VM's input commands queue."""
+        if isinstance(input_commands, list):
+            input_commands = '\n'.join(input_commands)
+        else:
+            input_commands = [input_commands]
+
+        self.input_commands.extend(input_commands)
+        self.output_terminal.append("")
+        self.paused = False
+        self.debug_log(f"[ADD INPUTS] Add series of commands to input commands queue")
+
+    def debug_log(self, message):
+        """If debug is True, add op_message to an operation log"""
+        if self.debug:
+            self.op_log.append(message)
+
+    def save_log(self, file_name = "vm_log", file_loc = ""):
+        """Save log to a .txt file"""
+        import os
+        full_path = os.path.join(file_loc, f"{file_name}.txt")
+        with open(full_path, "w") as f:
+            f.write('\n'.join(self.op_log))
 
     def run_computer(self, input_commands = []):
         """Run Computer with an initial list of commands"""
@@ -287,31 +317,3 @@ class VirtualMachine:
                 self.pointer += move_ip + 1
 
         return self.output_terminal
-
-    def replicate(self, copy_no = 1):
-        """Create and return a copy of the current VirtualMachine instance, preserving its state."""
-        # Create a new instance with the original program bytes
-        new_vm = VirtualMachine(self.program_bytes, debug=self.debug)
-
-        # Deep copy the current VM state
-        new_vm.paused = self.paused
-        new_vm.running = self.running
-        new_vm.pointer = self.pointer
-        new_vm.memory  = self.memory.copy()
-        new_vm.registers = self.registers.copy()
-        new_vm.output_stack = self.output_stack.copy()
-        new_vm.input_commands = self.input_commands.copy()
-        new_vm.output_terminal = self.output_terminal.copy()
-
-        # Copy operation log and add replication marker
-        new_vm.op_log = self.op_log.copy()
-        new_vm.debug_log(f"[{copy_no:05}_COPY] __REPLICATED VM AT CURRENT STATE__")
-
-        return new_vm
-
-    def save_log(self, file_name = "vm_log", file_loc = ""):
-        """Save log to a .txt file"""
-        import os
-        full_path = os.path.join(file_loc, f"{file_name}.txt")
-        with open(full_path, "w") as f:
-            f.write('\n'.join(self.op_log))
