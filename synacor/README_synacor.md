@@ -1,0 +1,3 @@
+Setting up the VM was fairly simple, and largely followed a similar structure to the Intcode VM from AoC 2019.
+
+Automating of the console playing the text game began with traversing the initial maze with a bfs, which was fairly simple to set up. The big obstacle became how to uniquely identify each room, which was originally done by creating a hash based on the description but needs a more robust solution as some rooms are identical.
