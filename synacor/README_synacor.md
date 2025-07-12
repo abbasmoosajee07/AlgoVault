@@ -53,11 +53,13 @@ Key features:
 ### Room Uniqueness
 
 One major challenge was identifying and tracking distinct rooms during BFS traversal.
-Initially, room uniqueness was determined using an MD5 hash of the room description. However, this approach failed when rooms shared identical descriptions but were logically different (e.g., symmetrical branches or hidden exits).
+Initially, room uniqueness was determined using an MD5 hash of the room description. However, this approach failed when rooms shared identical descriptions but were logically different (e.g., symmetrical branches or hidden exits),.
 
 **Current workaround**:
 - Room IDs are derived from hashed descriptions.
 - Additional logic or in-game cues may be needed to disambiguate identical rooms.
+- Overcame identical rooms, next to each other by a hardcoded solution.
+- Removed the backtracking prevention, to allow for a more holistic solution, albeit coming at the cost of a longer solution.
 
 This remains an area for future improvement, potentially using exit structure, inventory state, or dynamic tagging of room paths.
 
