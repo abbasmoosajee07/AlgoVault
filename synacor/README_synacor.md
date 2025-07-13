@@ -60,6 +60,7 @@ Initially, room uniqueness was determined using an MD5 hash of the room descript
 - Additional logic or in-game cues may be needed to disambiguate identical rooms.
 - Overcame identical rooms, next to each other by a hardcoded solution.
 - Removed the backtracking prevention, to allow for a more holistic solution, albeit coming at the cost of a longer solution.
+- Solving the coins puzzle equation uses a over complicated solution, that could be simplified with a more hardcoded solution.
 
 This remains an area for future improvement, potentially using exit structure, inventory state, or dynamic tagging of room paths.
 
@@ -68,7 +69,7 @@ This remains an area for future improvement, potentially using exit structure, i
 
 - Python 3.8+
 - `IPython.display` (for HTML terminal rendering)
-- Standard libraries: `re`, `hashlib`, `collections`, `os`, `copy`
+- Standard libraries: `re`, `hashlib`, `collections`, `os`, `copy`, `itertools`
 
 ## 🚀 Getting Started
 
