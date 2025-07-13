@@ -301,6 +301,9 @@ class VirtualMachine:
         with open(full_path, "w") as f:
             f.write('\n'.join(self.op_log))
 
+    def monkey_patching(self, patches):
+        self.patched = patches
+
     def run_computer(self, input_commands = []):
         """Run Computer with an initial list of commands"""
         if input_commands:
@@ -311,8 +314,13 @@ class VirtualMachine:
             if opcode not in self.opcode_map:
                 raise ValueError(f"Unknown opcode {opcode} at position {self.pointer}")
 
+            # Call monkey patch if available
+            if hasattr(self, "patched") and callable(self.patched):
+                self.pointer, self.registers, self.memory = self.patched(self.pointer, self.registers, self.memory)
+
             op_fn, (func_args) = self.opcode_map[opcode]
             move_ip = op_fn(func_args)
+
             if move_ip is not None:
                 self.pointer += move_ip + 1
 

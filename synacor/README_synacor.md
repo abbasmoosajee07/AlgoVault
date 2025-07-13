@@ -1,79 +1,88 @@
-# Synacor Challenge: Virtual Machine & Automated Console Solver
+# 🧠 Synacor Challenge: Virtual Machine & Automated Console Solver
 
-This project is a Python implementation of the [Synacor Challenge (Archive)](https://github.com/Aneurysm9/vm_challenge/tree/main), consisting of:
+A Python implementation of the [Synacor Challenge](https://github.com/Aneurysm9/vm_challenge/tree/main), featuring:
 
-- A full-featured virtual machine (VM) capable of executing Synacor bytecode.
-- An intelligent console system that can interpret game output, extract codes, manage inventory, and explore the text-based adventure world via automation.
+- A fully compliant virtual machine (VM) for executing Synacor bytecode.
+- An intelligent automation layer for exploring and solving the in-game text adventure.
 
 ---
 
-## 🧠 Project Structure
+## Project Structure
 
 ### 1. `VirtualMachine` — Synacor VM Emulator
 
-Implements the full Synacor spec with:
+Faithfully implements the Synacor architecture:
 
-- **15-bit memory** (32K words)
+- **15-bit address space** (32,768 words of memory)
 - **8 general-purpose registers**
 - **Stack operations**, function calls, and conditional jumps
-- **Instruction logging and state replication** for controlled execution
-- **Interactive input/output** buffering
-- **Debug logging** an optional log that can be turned on to store each operation performed, and saved to a .txt file.
-- **Replication** allows for creating a copy of the vm at a specific state, allowing for search algorithms like BFS/DFS to be used.
+- **Input/output buffering** with optional interactive mode
+- **State replication** for search algorithms (e.g., BFS/DFS)
+- **Debug logging** to trace every operation (optional output to `.txt`)
+- **Modular architecture**, similar to my solution for *[Advent of Code 2019](https://github.com/abbasmoosajee07/AdventofCode/blob/main/2019/Intcode_Computer/Intcode_Computer.py)*’s Intcode VM
 
-The structure mirrors the classic Intcode VM from *Advent of Code 2019*, making the architecture modular, transparent, and extendable.
-
----
-
-### 2. `SynacorConsole` — Automated Game Interaction Layer
-
-Built to automate the process of exploring and solving the text adventure portion of the challenge.
-
-Key features:
-
-- **Text parsing & UI**
-  Interprets room descriptions, exits, and item listings from game output.
-
-- **Code extraction**
-  Detects and stores special challenge codes using regex, along with their MD5 hashes.
-
-- **HTML terminal renderer**
-  Visually formats game output with syntax highlighting for easier debugging and review.
-
-- **Breadth-First Search (BFS)** world traversal
-  Systematically explores the game map, simulating user input and tracking visited rooms.
-
-- **Inventory & item interaction management**
-  Implements logic for item collection, conditional usage (e.g., filling and lighting a lantern), and backtracking prevention.
+> Replication enables state cloning at any point—critical for exploring alternate execution paths and game states.
 
 ---
 
-## 🚧 Challenges Encountered
+### 2. `SynacorConsole` — Automated Game Console
 
-### Room Uniqueness
+An automation layer that interfaces with the VM to interact with the Synacor text adventure.
 
-One major challenge was identifying and tracking distinct rooms during BFS traversal.
-Initially, room uniqueness was determined using an MD5 hash of the room description. However, this approach failed when rooms shared identical descriptions but were logically different (e.g., symmetrical branches or hidden exits),.
+#### Key Features:
 
-**Current workaround**:
-- Room IDs are derived from hashed descriptions.
-- Additional logic or in-game cues may be needed to disambiguate identical rooms.
-- Overcame identical rooms, next to each other by a hardcoded solution.
-- Removed the backtracking prevention, to allow for a more holistic solution, albeit coming at the cost of a longer solution.
-- Solving the coins puzzle equation uses a over complicated solution, that could be simplified with a more hardcoded solution.
-
-This remains an area for future improvement, potentially using exit structure, inventory state, or dynamic tagging of room paths.
+- **Text Parsing**: Extracts room names, descriptions, exits, and items from game output.
+- **Game Map Traversal**:Uses **Breadth-First Search (BFS)** to explore all reachable rooms.
+- **Inventory Management**: Automatically collects, uses, and manages items based on game logic.
+- **Code Extraction**: Uses regex to identify challenge codes and compute their MD5 hashes.
+- **HTML Terminal Renderer**: Renders clean output for easier debugging and visualization.
 
 ---
-## 🧩 Dependencies
+
+## Core Algorithms
+
+### Room Uniqueness & Mapping
+
+Room identity is critical to traversal. Originally based on `md5(description)`, which fails for visually identical but logically distinct rooms.
+
+**Current strategy:**
+- Room ID is based on the **room purpose** (description beyond the name).
+- Hardcoded exceptions help disambiguate edge cases.
+- Backtracking is now allowed to ensure complete coverage.
+
+---
+
+### Coin Puzzle Solver
+
+- Maps words like `two`, `triangle`, or `seven` to integers (2–9).
+- Uses `itertools.permutations` to try every arrangement.
+- Evaluates equations using a custom (non-`eval`) parser.
+- Could be simplified further via hardcoded structure recognition.
+
+---
+
+### Mystery Puzzle (Debugger-Based)
+
+- Solved using direct VM introspection:
+  - Inspects stack, memory, and register states.
+  - Injects breakpoints and traces for logical deduction.
+- Monkey Patching
+
+---
+
+## Dependencies
 
 - Python 3.8+
-- `IPython.display` (for HTML terminal rendering)
-- Standard libraries: `re`, `hashlib`, `collections`, `os`, `copy`, `itertools`
+- Standard library:
+  - `re`, `hashlib`, `collections`, `os`, `copy`, `itertools`
+- Optional:
+  - `IPython.display` — for rich HTML-based terminal output
 
-## 🚀 Getting Started
+---
 
-To run the automated exploration:
+## Getting Started
+
+To launch the automated console:
 
 ```python
 console = SynacorConsole(software=program_bytes, spec_code="startCodeHere")
