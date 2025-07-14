@@ -9,6 +9,7 @@ class VirtualMachine:
         self.paused = False                   # Indicates if execution is paused (waiting for input)
         self.running = True                   # Indicates if the VM is running
         self.version_no = 0
+        self.software_patches = None
 
         # State components
         self.memory = [0] * self.MODULUS      # Memory: 15-bit address space 32K words of 16-bit values
@@ -269,6 +270,7 @@ class VirtualMachine:
         new_vm.output_stack = self.output_stack.copy()
         new_vm.input_commands = self.input_commands.copy()
         new_vm.output_terminal = self.output_terminal.copy()
+        new_vm.software_patches = self.software_patches
         new_vm.version_no = copy_no
 
         # Copy operation log and add replication marker
@@ -302,7 +304,8 @@ class VirtualMachine:
             f.write('\n'.join(self.op_log))
 
     def monkey_patching(self, patches):
-        self.patched = patches
+        self.software_patches = patches
+        self.debug_log(f"[{self.pointer:05}: UPD] Software Patched")
 
     def run_computer(self, input_commands = []):
         """Run Computer with an initial list of commands"""
@@ -314,14 +317,14 @@ class VirtualMachine:
             if opcode not in self.opcode_map:
                 raise ValueError(f"Unknown opcode {opcode} at position {self.pointer}")
 
-            # Call monkey patch if available
-            if hasattr(self, "patched") and callable(self.patched):
-                self.pointer, self.registers, self.memory = self.patched(self.pointer, self.registers, self.memory)
-
             op_fn, (func_args) = self.opcode_map[opcode]
             move_ip = op_fn(func_args)
 
             if move_ip is not None:
                 self.pointer += move_ip + 1
+
+            # Call monkey patch if available
+            if hasattr(self, "software_patches") and callable(self.software_patches):
+                self.software_patches(self.pointer, self.registers, self.memory)
 
         return self.output_terminal
