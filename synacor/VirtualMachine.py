@@ -180,9 +180,8 @@ class VirtualMachine:
             val = b & c
         elif op_type == "or":
             val = b | c
-            op_type += " "
         self.__set_registers(a, val)
-        self.debug_log(f"[{self.pointer:05}: {op_type.upper()}] reg[{a}] = {val} (bit_op: {b} {op_sign} {c})")
+        self.debug_log(f"[{self.pointer:05}: {op_type.upper():3}] reg[{a}] = {val} (bit_op: {b} {op_sign} {c})")
         return args_count
 
     def __not(self, args_count):

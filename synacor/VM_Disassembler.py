@@ -32,7 +32,7 @@ class VM_Disassembler:
         args = " ".join(format_arg(arg) for arg in instruction[1:])
         return f"{address:5}: {opname:7} {args}".rstrip()
 
-    def disassemble(self, start, count, visualize: bool = False):
+    def disassemble(self, start, count):
         """
         Disassemble `count` instructions starting from `start` address.
         Prints disassembled output directly.
@@ -41,9 +41,7 @@ class VM_Disassembler:
         printed = 0
         r7_call_point = None
         program = self.program
-
-        if visualize:
-            print(f"\nDisassembly from address {start} for {count} instructions:\n")
+        disassembled_prog = [f"\nDisassembly from address {start} for {count} instructions:\n"]
 
         while printed < count and i < len(program):
             opcode = program[i]
@@ -54,18 +52,32 @@ class VM_Disassembler:
             instr = program[i:i + 1 + argcount]
             if opcode == 17:
                 r7_call_point = i
-            if visualize:
-                print(self.format_instruction(i, instr))
+            disassembled_prog.append(self.format_instruction(i, instr))
             i += 1 + argcount
             printed += 1
-        return r7_call_point
+        return r7_call_point, disassembled_prog
 
     @staticmethod
     def ackermann_func(m, n, k, M):
-        """Custom function that behaves similarly to a modified Ackermann function."""
+        """
+        A stack-based variation of the Ackermann function with parameters:
+        - m, n: initial input values
+        - k: custom constant controlling growth
+        - M: modulus applied to all results
+
+        The behavior is defined by:
+        - A(0, n) = (n + 1) % M
+        - A(1, n) = (n + k + 1) % M
+        - A(2, n) = ((n + 2) * k + n + 1) % M
+        - A(m, 0) = A(m - 1, k)
+        - A(m, n) = A(m - 1, A(m, n - 1))
+        """
         stack = [m, n]
+
         while len(stack) > 1:
-            n, m = stack.pop(), stack.pop()
+            n = stack.pop()
+            m = stack.pop()
+
             if m == 0:
                 stack.append((n + 1) % M)
             elif m == 1:
@@ -76,4 +88,5 @@ class VM_Disassembler:
                 stack.extend([m - 1, k])
             else:
                 stack.extend([m - 1, m, n - 1])
+
         return stack[0]

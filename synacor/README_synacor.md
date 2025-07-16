@@ -66,12 +66,21 @@ Room identity is critical to traversal. Originally based on `md5(description)`, 
 - Solved using direct VM introspection:
   - Inspects stack, memory, and register states.
   - Injects breakpoints and traces for logical deduction.
-- Monkey Patching
+  - Built the `VM_Debugger`, which prints disassembles and prints out a small portion of the program to debug at which pointer the R7 register must be called.
+  - Modified Ackermann func, as shown below, allows the target_address to be calculated.
 
+$$
+A(m, n) =
+\begin{cases}
+(n + 1) \mod M & \text{if } m = 0 \\\\
+(n + k + 1) \mod M & \text{if } m = 1 \\\\
+((n + 2) \cdot k + n + 1) \mod M & \text{if } m = 2 \\\\
+A(m - 1, k) & \text{if } n = 0 \text{ and } m > 2 \\\\
+A(m - 1, A(m, n - 1)) & \text{otherwise}
+\end{cases}
+$$
 ---
-
 ## Dependencies
-
 - Python 3.8+
 - Standard library:
   - `re`, `hashlib`, `collections`, `os`, `copy`, `itertools`
@@ -81,9 +90,8 @@ Room identity is critical to traversal. Originally based on `md5(description)`, 
 ---
 
 ## Getting Started
-
 To launch the automated console:
 
 ```python
 console = SynacorConsole(software=program_bytes, spec_code="startCodeHere")
-console.play_game()
+console.auto_play()
