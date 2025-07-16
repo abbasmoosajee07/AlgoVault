@@ -1,0 +1,10 @@
+Archive Link: https://github.com/gabekanegae/synacor-challenge.git
+
+- 1: 17216b1664dbfc5c8707c4ab1300c280
+- 2: 165a062aef00ce6092b53dd770f10b9e
+- 3: e6c68e654ca6b5682d4ec3101ef43494
+- 4: ea79061044e529ea31e08a34cc81684a
+- 5: 8cd42e057273ca603f62fd18bdc7b314
+- 6: 9fb67af3861f261b4870a6f1f4531fe7
+- 7: a540feabe3fcbf2797ba313752606038
+- 8: d71cab98f729d62985b2caeb0d37f72c

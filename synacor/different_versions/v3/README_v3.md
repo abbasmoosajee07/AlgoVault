@@ -1,0 +1,10 @@
+Archive Link: https://github.com/gjanee/synacor.git
+
+- 1: 29711d9e75780929574305f4175c64e4
+- 2: 783fa51ca26675971e696d9af865becb
+- 3: 9ac35e42f4dcc55c9eb753e0a6345f9a
+- 4: 3659fee5d52f4dae22e466bebe0da08f
+- 5: 3b7556107a118b79bf8849168d6c473f
+- 6: 041b4d336d755f96066157f19adf717c
+- 7: ff1ee4a1bef2de66bcab8cae6a2a1fc6
+- 8: b4c3f98a3e0094e450dcbf835a6d495e
