@@ -1,7 +1,7 @@
 class VirtualMachine:
     MODULUS = 32768
 
-    def __init__(self, program_bytes: bytes, debug: bool = False):
+    def __init__(self, program_bytes: bytes, debug: bool = False, trace_log: any = None):
         """Initialize the Virtual Machine."""
         # Core configuration
         self.pointer = 0                      # Instruction pointer
@@ -19,6 +19,7 @@ class VirtualMachine:
         self.input_commands  = []             # Input buffer for keyboard simulation
         self.op_log = []                      # Log of executed operations (used for debugging/tracing)
         self.program_bytes = program_bytes    # Create an initial copy of the bytes program
+        self.trace_log = trace_log
 
         self.program = [                      # Convert binary program to list of integers
             (high << 8) | low
@@ -272,11 +273,22 @@ class VirtualMachine:
         new_vm.output_terminal = self.output_terminal.copy()
         new_vm.software_patches = self.software_patches
         new_vm.version_no = copy_no
+        new_vm.trace_log = self.trace_log.copy() if self.trace_log else self.trace_log
 
         # Copy operation log and add replication marker
         new_vm.op_log = self.op_log.copy()
         new_vm.debug_log(f"[{new_vm.version_no:05}_COPY] __REPLICATED VM AT CURRENT STATE__")
 
+        return new_vm
+
+    def reset_machine(self, copy_no=1, trace_log: any = None):
+        """
+        Reset the VM to its original state (program start) using the original program bytes.
+        Does NOT preserve runtime state like memory, registers, or pointer.
+        """
+        new_vm = VirtualMachine(self.program_bytes, debug=self.debug, trace_log=trace_log)
+        new_vm.version_no = copy_no
+        new_vm.debug_log(f"[{copy_no:05}_RESET] __RESET VM TO INITIAL STATE__")
         return new_vm
 
     def add_input(self, input_commands):
@@ -323,7 +335,14 @@ class VirtualMachine:
             if move_ip is not None:
                 self.pointer += move_ip + 1
 
-            # Call monkey patch if available
+            # Add to trace_log if available
+            if self.trace_log is not None:
+                instruction_length = func_args if isinstance(func_args, int) else func_args[0]
+                self.trace_log.append(
+                    (self.pointer, tuple(self.memory[self.pointer:self.pointer + 1 + instruction_length]))
+                )
+
+                        # Call monkey patch if available
             if hasattr(self, "software_patches") and callable(self.software_patches):
                 self.software_patches(self.pointer, self.registers, self.memory)
 
