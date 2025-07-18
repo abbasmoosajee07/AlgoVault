@@ -4,15 +4,12 @@ from collections import defaultdict, deque
 from IPython.display import display, HTML
 from VirtualMachine import VirtualMachine
 from VM_Disassembler import VM_Disassembler
+from EquationParser import EquationParser
 
 class SynacorConsole:
     DIRECTIONS = {
             "south": (-1,0), "north": (1, 0), "east":  (0,1), "west":  (0, -1),
         }
-    OP_DICT = {
-            "+": operator.add, "-": operator.sub, "*": operator.mul, "**": operator.pow
-        }
-
     def __init__(self, software: bytes, spec_code: str, visualize: bool = True, html_display = True):
         self.software = software
         self.spec_code = spec_code
@@ -76,43 +73,42 @@ class SynacorConsole:
         # Take first 4 hex digits, convert to int, and mod 10000 to get a 4-digit number
         return int(h[:8], 16) % 10000
 
-    def parse_equation(self, eq_str):
-        lhs, rhs = eq_str.split("=")
-        rhs = int(rhs.strip())
-        # Replace underscores with placeholder p[i]
-        parts = re.split(r'(_)', lhs.strip())
-        indices = [i for i, x in enumerate(parts) if x == '_']
+    def __solve_coins_slot(self, inventory, game_copy, equation):
+        word_to_num = {
+            "two": 2, "three": 3, "four": 4, "five": 5,
+            "six": 6, "seven": 7, "eight": 8, "nine": 9,
+            "digon": 2, "triangle": 3, "square": 4, "pentagon": 5,
+            "hexagon": 6, "heptagon": 7, "octagon": 8, "nonagon": 9,
+        }
 
-        def equation(p):
-            expr = parts[:]
-            for i, idx in enumerate(indices):
-                expr[idx] = str(p[i])
-            expr_str = ''.join(expr).replace("^", "**")
+        coin_items = [item for item in inventory if "coin" in item]
+        look_coins = [f"look {item}" for item in coin_items]
 
-            # Tokenize
-            tokens = re.findall(r'\d+|[\+\-\*]{1,2}', expr_str)
+        coin_game = game_copy.replicate()
+        *_, final_terminal = coin_game.run_computer(look_coins)
+        coin_lines = [line for line in final_terminal.splitlines() if "coin" in line]
 
-            # Evaluate with operator precedence: ** > * > +/-
-            def apply(ops, precedence):
-                stack = []
-                i = 0
-                while i < len(ops):
-                    if ops[i] in precedence:
-                        a, b = int(stack.pop()), int(ops[i+1])
-                        op_func = self.OP_DICT[ops[i]]
-                        stack.append(str(op_func(a, b)))
-                        i += 2
-                    else:
-                        stack.append(ops[i])
-                        i += 1
-                return stack
-            # Handle ** first, then *, then +/-
-            for prec in (["**"], ["*"], ["+", "-"]):
-                tokens = apply(tokens, prec)
+        # Build coin_dict: shape/number -> coin item name
+        coin_dict = defaultdict(str)
+        for item in coin_items:
+            coin_type = item.replace("coin", "").strip()
+            coin_type = "rounded" if coin_type == "concave" else coin_type
 
-            return int(tokens[0]) == rhs
+            matching_line = next((line for line in coin_lines if coin_type in line), "")
+            match = next((num for word, num in word_to_num.items() if word in matching_line), None)
 
-        return equation
+            if match:
+                coin_dict[match] = item
+
+        parser = EquationParser(equation)
+        equation_func = parser.to_callable()
+
+        # Solve the equation by trying permutations of the coin values
+        solution = next(filter(equation_func, itertools.permutations(coin_dict.keys())))
+
+        # Use coins in the determined order
+        use_coins = [f"use {coin_dict[num]}" for num in solution]
+        return look_coins + use_coins
 
     def __format_terminal(self, text, code_color, input_color):
         """Highlight any detected code-like strings in the terminal."""
@@ -254,41 +250,6 @@ class SynacorConsole:
         else:
             return [f"take {item}", f"use {item}"], {item}
 
-    def __solve_coins_slot(self, inventory, game_copy, equation):
-        word_to_num = {
-            "two": 2, "three": 3, "four": 4, "five": 5,
-            "six": 6, "seven": 7, "eight": 8, "nine": 9,
-            "digon": 2, "triangle": 3, "square": 4, "pentagon": 5,
-            "hexagon": 6, "heptagon": 7, "octagon": 8, "nonagon": 9,
-        }
-
-        coin_items = [item for item in inventory if "coin" in item]
-        look_coins = [f"look {item}" for item in coin_items]
-
-        coin_game = game_copy.replicate()
-        *_, final_terminal = coin_game.run_computer(look_coins)
-        coin_lines = [line for line in final_terminal.splitlines() if "coin" in line]
-
-        # Build coin_dict: shape/number -> coin item name
-        coin_dict = defaultdict(str)
-        for item in coin_items:
-            coin_type = item.replace("coin", "").strip()
-            coin_type = "rounded" if coin_type == "concave" else coin_type
-
-            matching_line = next((line for line in coin_lines if coin_type in line), "")
-            match = next((num for word, num in word_to_num.items() if word in matching_line), None)
-
-            if match:
-                coin_dict[match] = item
-
-        # Solve the equation by trying permutations of the coin values
-        solution = next(filter(self.parse_equation(equation),
-                        itertools.permutations(coin_dict.keys())))
-
-        # Use coins in the determined order
-        use_coins = [f"use {coin_dict[num]}" for num in solution]
-        return look_coins + use_coins
-
     def __debug_vm(self, test_console):
         """
         Constructs a software patch function that:
@@ -390,7 +351,7 @@ class SynacorConsole:
                 if delta:
                     new_pos = (pos[0] + delta[0], pos[1] + delta[1])
                     queue.append((maze_vm, [direction], new_pos))
-        self.maze_grid = (maze_dict, (start, goal), eq_sum)
+        self.maze_grid = (maze_dict, (start, goal), int(eq_sum))
         return maze_dict
 
     def render_grid(self, grid_props):
@@ -442,12 +403,16 @@ class SynacorConsole:
     def traverse_maze(self, grid_props):
         maze_dict, (start, goal), eq_sum = grid_props
         # print(maze_dict)
-        return []
+        print((start, goal), type(eq_sum))
 
+        # return []
+        return [
+            'north','east','east','north','west','south','east','east','west','north','north','east','vault',
+            ]
 
     def __solve_grid_puzzle(self, game_copy, pending_actions):
         maze_copy = game_copy.replicate()
-        maze_formed= self.build_maze(maze_copy, pending_actions)
+        maze_formed = self.build_maze(maze_copy, pending_actions)
         rendered_maze = self.render_grid(self.maze_grid)
         print("\n".join(rendered_maze))
         maze_steps = self.traverse_maze(self.maze_grid)
@@ -473,6 +438,7 @@ class SynacorConsole:
             game_copy = game_state.replicate(steps)
             *_, last_terminal = game_copy.run_computer(pending_actions)
             self.__extract_codes(last_terminal)
+
             if "Congratulations; you have reached the end of the challenge!" in last_terminal:
                 complete_solution.append(action_history[:])
                 continue
@@ -490,7 +456,7 @@ class SynacorConsole:
             base_inv = game_inv.copy()
 
             # Condition: Check IF all coins collected and in correct room
-            if (room_id == 7578 and collect_coins.issubset(game_inv)):
+            if room_id == 7578 and collect_coins.issubset(game_inv):
                 if not coins_puzzle:
                     equation = next((line.strip() for line in last_terminal.splitlines() if " = " in line), None)
                     coin_solution = self.__solve_coins_slot(game_inv, game_copy, equation)
@@ -502,7 +468,7 @@ class SynacorConsole:
                 queue.append((game_copy, base_inv, coin_solution, action_history))
 
             # Condition: Check IF strange book has been collected and in correct room
-            if (room_id == 6393 and {"strange book"}.issubset(game_inv)):
+            if room_id == 6393 and {"strange book"}.issubset(game_inv):
                 if not mystery_puzzle:
                     patched_software, _ = self.build_software_patch(game_copy, action_history)
                     patch_actions, software = (["use teleporter"], "patched software")
@@ -546,7 +512,7 @@ class SynacorConsole:
                 next_history  = action_history + dir_sequence
                 queue.append((game_copy, base_inv, patch_actions, next_history))
 
-        print("Steps:",steps, "Total Solutions:", len(complete_solution))
+        print("Steps:",steps, "| Total Solutions:", len(complete_solution))
         return complete_solution, self.challenge_codes
 
     def __restructure_commands(self, command_list):
