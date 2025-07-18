@@ -51,6 +51,10 @@ Room identity is critical to traversal. Originally based on `md5(description)`, 
 - Backtracking is now allowed to ensure complete coverage.
 
 ---
+## Puzzles
+- Three specific puzzles within the adventure game, that had to be solved using different approaches.
+- If conditions used to activate these solutions based on being in correct room and having correct items in inventory.
+- Once a solution is reached for first time allow option to reset queue, improving speed by clearing other options.
 
 ### Coin Puzzle Solver
 

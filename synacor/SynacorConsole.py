@@ -1,4 +1,4 @@
-import os, re, time, copy
+import os, re, time, copy, textwrap
 import html, hashlib, itertools, operator
 from collections import defaultdict, deque
 from IPython.display import display, HTML
@@ -7,16 +7,17 @@ from VM_Disassembler import VM_Disassembler
 
 class SynacorConsole:
     DIRECTIONS = {
-            'south': (-1,0), 'north': (1, 0), 'east':  (0,1), 'west':  (0, -1),
+            "south": (-1,0), "north": (1, 0), "east":  (0,1), "west":  (0, -1),
         }
     OP_DICT = {
-            '+': operator.add, '-': operator.sub, '*': operator.mul, '**': operator.pow
+            "+": operator.add, "-": operator.sub, "*": operator.mul, "**": operator.pow
         }
 
-    def __init__(self, software: bytes, spec_code: str, visualize: bool = True):
+    def __init__(self, software: bytes, spec_code: str, visualize: bool = True, html_display = True):
         self.software = software
         self.spec_code = spec_code
         self.visualize = visualize
+        self.html_display = html_display
 
         self.console = VirtualMachine(software)
 
@@ -36,34 +37,35 @@ class SynacorConsole:
 
     def mirror_image(self, string):
         """Return the mirror image of a string with mirrored 'b', 'p', 'q', 'd'."""
-        mirror_map = {'b': 'd', 'p': 'q', 'q': 'p', 'd': 'b'}
+        mirror_map = {"b": "d", "p": "q", "q": "p", "d": "b"}
         return re.sub(r"[bpqd]", lambda m: mirror_map[m.group()], string[::-1])
 
-    def __extract_codes(self, text, codes = []):
+    def __extract_codes(self, text, codes=[]):
         """
         Extract valid mixed-case challenge codes from the given text
         and record their MD5 hashes with timestamps.
         """
-        # Pattern: must include at least one lowercase followed by uppercase and then lowercase again
-        found = re.findall(r"[A-Za-z]*[a-z]+[A-Z]+[a-z]+[A-Za-z]*", text)
-        if self.code_no == 7:
-            all_strings = re.findall(r'"([\w]+)"', text)
-            for test in all_strings:
-                self.valid_codes.add(test)
-            found = [self.mirror_image(test) for test in all_strings]
-        codes.extend(found)
         current_time = time.time()
+        if self.code_no == 7:
+            # Special case: extract quoted words and mirror them
+            all_strings = re.findall(r'"(\w+)"', text)
+            self.valid_codes.update(all_strings)
+            codes.extend(self.mirror_image(s) for s in all_strings)
+        else:
+            # General case: extract mixed-case challenge codes
+            codes.extend(re.findall(r"[A-Za-z]*[a-z]+[A-Z]+[a-z]+[A-Za-z]*", text))
 
+        # Register any new codes
         for code in codes:
-            if code not in self.valid_codes:
+            if code not in self.valid_codes and self.code_no < 8:
                 self.code_no += 1
                 total_time = f"{current_time - self.start_time:.5f}s"
-                code_time = f"{current_time - self.prev_time:.5f}s"
+                code_time  = f"{current_time - self.prev_time:.5f}s"
                 self.challenge_codes[self.code_no] = (
                     code, self.md5_hash(code), code_time, total_time,
                 )
-                self.valid_codes.add(code)
                 self.prev_time = current_time
+                self.valid_codes.add(code)
 
     @staticmethod
     def md5_hash(code):
@@ -75,7 +77,7 @@ class SynacorConsole:
         return int(h[:8], 16) % 10000
 
     def parse_equation(self, eq_str):
-        lhs, rhs = eq_str.split('=')
+        lhs, rhs = eq_str.split("=")
         rhs = int(rhs.strip())
         # Replace underscores with placeholder p[i]
         parts = re.split(r'(_)', lhs.strip())
@@ -85,7 +87,7 @@ class SynacorConsole:
             expr = parts[:]
             for i, idx in enumerate(indices):
                 expr[idx] = str(p[i])
-            expr_str = ''.join(expr).replace('^', '**')
+            expr_str = ''.join(expr).replace("^", "**")
 
             # Tokenize
             tokens = re.findall(r'\d+|[\+\-\*]{1,2}', expr_str)
@@ -105,7 +107,7 @@ class SynacorConsole:
                         i += 1
                 return stack
             # Handle ** first, then *, then +/-
-            for prec in (['**'], ['*'], ['+', '-']):
+            for prec in (["**"], ["*"], ["+", "-"]):
                 tokens = apply(tokens, prec)
 
             return int(tokens[0]) == rhs
@@ -117,11 +119,11 @@ class SynacorConsole:
         lines = []
         for line in text.splitlines():
             # Simple input highlight: lines starting with '>'
-            if line.strip().startswith('>>'):
+            if line.strip().startswith(">>"):
                 line = f"<span style='color:{input_color}'>{line}</span>"
             else:
                 # Escape any regex-special characters in valid codes
-                pattern = r'\b(' + '|'.join(html.escape(code) for code in self.valid_codes) + r')\b'
+                pattern = r'\b(' + "|".join(html.escape(code) for code in self.valid_codes) + r')\b'
                 line = re.sub(
                     pattern, lambda m: f"<span style='color:{code_color}'>{m.group(1)}</span>",
                     line
@@ -181,17 +183,19 @@ class SynacorConsole:
 
         final_text = "\n".join(wrapped_lines)
 
-        html_formatted = (
-            f"<div style='background-color: {self.color_dict['background']}; "
-            f"width: {terminal_size + 2}ch; padding: 0.75ex;'>"
-            f"<pre style='background-color: {self.color_dict['background']}; "
-            f"color: {self.color_dict['terminal']}; margin: 0; font-family: monospace; "
-            f"width: {terminal_size + 2}ch;'>"
-            + self.__format_terminal(final_text, self.color_dict['codes'], self.color_dict['input'])
-            + "</pre></div>"
-        )
-
-        display(HTML(html_formatted))
+        if self.html_display:
+            html_formatted = (
+                f"<div style='background-color: {self.color_dict['background']}; "
+                f"width: {terminal_size + 2}ch; padding: 0.75ex;'>"
+                f"<pre style='background-color: {self.color_dict['background']}; "
+                f"color: {self.color_dict['terminal']}; margin: 0; font-family: monospace; "
+                f"width: {terminal_size + 2}ch;'>"
+                + self.__format_terminal(final_text, self.color_dict['codes'], self.color_dict['input'])
+                + "</pre></div>"
+            )
+            display(HTML(html_formatted))
+        else:
+            print(html.unescape(final_text))
 
     def play_game_manually(self, actions = []):
         """
@@ -241,9 +245,11 @@ class SynacorConsole:
         """Return actions to collect and use the item, and what items will be added to inventory."""
         if item == "empty lantern":
             return [f"take {item}", "use can", "use lantern"], {"lit lantern"}
-        elif item in {"strange book", "business card"}:
+        elif item in {"strange book", "business card", "journal"}:
             return [f"take {item}", f"look {item}"], {item}
-        elif item in ["journal", "orb"] or "coin" in item:
+        elif item in {"orb"}:
+            return [f"look {item}"], {item}
+        elif "coin" in item:
             return [f"take {item}"], {item}
         else:
             return [f"take {item}", f"use {item}"], {item}
@@ -332,8 +338,7 @@ class SynacorConsole:
             return pointer, registers, memory
 
         # Optional: print the patch function as a string for inspection or debugging
-        patch_str = f"""
-        def software_patch(pointer, registers, memory):
+        patch_str = f"""        def software_patch(pointer, registers, memory):
             if pointer == {target_address}:
                 registers[7] = {ackermann_soln}
                 pointer += 1
@@ -341,8 +346,7 @@ class SynacorConsole:
                 memory[{next_patch_point}] = memory[{next_patch_point + 1}] = 21  # NOOP
                 registers[0] = 6
                 pointer += 2
-            return pointer, registers, memory
-            """
+            return pointer, registers, memory"""
 
         self.patched_software = patched_software
         self.patch_code_str = patch_str
@@ -435,28 +439,30 @@ class SynacorConsole:
 
         return output
 
-    def __solve_grid_puzzle(self, game_copy, pending_actions):
-
-        next_action = ["look journal"]
-        maze_copy = game_copy.replicate()
-
-        # *_, journal_entry = maze_copy.run_computer(next_action)
-        # self.display_terminal(journal_entry, next_action)
-
-        maze_formed= self.build_maze(maze_copy, pending_actions)
-
+    def traverse_maze(self, grid_props):
+        maze_dict, (start, goal), eq_sum = grid_props
+        # print(maze_dict)
         return []
+
+
+    def __solve_grid_puzzle(self, game_copy, pending_actions):
+        maze_copy = game_copy.replicate()
+        maze_formed= self.build_maze(maze_copy, pending_actions)
+        rendered_maze = self.render_grid(self.maze_grid)
+        print("\n".join(rendered_maze))
+        maze_steps = self.traverse_maze(self.maze_grid)
+        return ["take orb"] + maze_steps
 
     def bfs_exploration(self):
         """Perform BFS to explore and map out the game world."""
-        collect_coins = {'concave coin', 'shiny coin', 'red coin', 'blue coin', 'corroded coin'}
+        collect_coins = {"concave coin", "shiny coin", "red coin", "blue coin", "corroded coin"}
         coins_puzzle, mystery_puzzle, grid_puzzle = (False, False, False)
         visited, complete_solution = (set(), [])
         steps,  MAX_STEPS = (0, 1500)
 
         # Each entry: (console_state, pending_actions, path_so_far, action_history)
         # Use deque for efficient popping from the left
-        queue = deque([(self.console, set(), [], [])])
+        queue = deque([(self.console.replicate(), set(), [], [])])
 
         while queue and steps < MAX_STEPS:
             game_state, game_inv, pending_actions, action_history = queue.popleft()
@@ -467,20 +473,13 @@ class SynacorConsole:
             game_copy = game_state.replicate(steps)
             *_, last_terminal = game_copy.run_computer(pending_actions)
             self.__extract_codes(last_terminal)
-            if "mirror" in game_inv:
-                # self.display_terminal(last_terminal, pending_actions)
+            if "Congratulations; you have reached the end of the challenge!" in last_terminal:
                 complete_solution.append(action_history[:])
-                break
+                continue
 
             # Parse game state
             room, purpose, all_items, room_exits = self.__parse_game_state(last_terminal)
             room_id = self.__room_id(purpose)
-
-            # if 'journal' in game_inv and room == "Vault Antechamber" and "take orb" in action_history:
-            #     complete_solution.append(action_history[:])
-
-            if 'mirror' in game_inv:
-                complete_solution.append(action_history[:])
 
             # Skip if already visited with current inventory
             if (room_id, tuple(game_inv)) in visited:
@@ -490,32 +489,46 @@ class SynacorConsole:
             # Clone game_inv for branching paths
             base_inv = game_inv.copy()
 
-            # Condition: Check IF coin puzzle is reached
-            if (len(collect_coins & game_inv) == 5 and room_id == 7578) and not coins_puzzle:
-                equation = next((line.strip() for line in last_terminal.splitlines() if " = " in line), None)
-                coin_solution = self.__solve_coins_slot(game_inv, game_copy, equation)
+            # Condition: Check IF all coins collected and in correct room
+            if (room_id == 7578 and collect_coins.issubset(game_inv)):
+                if not coins_puzzle:
+                    equation = next((line.strip() for line in last_terminal.splitlines() if " = " in line), None)
+                    coin_solution = self.__solve_coins_slot(game_inv, game_copy, equation)
+                    coins_puzzle = True
+                    queue = deque([]) #* RESET queue deque, to delete unexplored paths and improve speed
                 action_history.extend(coin_solution)
                 future_actions.extend(coin_solution)
-                base_inv = {"all coins used", "lit lantern", "tablet"}
+                base_inv = (game_inv - collect_coins) | {"all coins used"}
                 queue.append((game_copy, base_inv, coin_solution, action_history))
-                coins_puzzle = True
 
-            # Condition: Check IF strange book has been collected
-            if ("look strange book" in pending_actions) and not mystery_puzzle:
-                patched_software, patch_str = self.build_software_patch(game_copy, action_history)
-                next_actions, item_made = (["use teleporter"], "patched software")
+            # Condition: Check IF strange book has been collected and in correct room
+            if (room_id == 6393 and {"strange book"}.issubset(game_inv)):
+                if not mystery_puzzle:
+                    patched_software, _ = self.build_software_patch(game_copy, action_history)
+                    patch_actions, software = (["use teleporter"], "patched software")
+                    mystery_puzzle = True
+                    queue = deque([]) #* RESET queue deque, to delete unexplored paths and improve speed
+                base_inv.add(software)
                 game_copy.monkey_patching(patched_software)
-                base_inv.add(item_made)
-                action_history.append(item_made)
-                action_history.extend(next_actions)
-                future_actions.extend(next_actions)
-                queue.append((game_copy, base_inv, future_actions, action_history))
-                mystery_puzzle = True
+                action_history.extend([software] + patch_actions)
+                queue.append((game_copy, base_inv, patch_actions, action_history))
+
+            # Condition: Check if journal/orb is collected and in correct room
+            if room_id == 5141 and {"journal", "orb"}.issubset(game_inv):
+                if not grid_puzzle:
+                    maze_actions = self.__solve_grid_puzzle(game_state, pending_actions)
+                    grid_puzzle = True
+                    enter_maze = "enter maze"
+                    queue = deque([]) #* RESET queue deque, to delete unexplored paths and improve speed
+                base_inv.add(enter_maze)
+                future_actions.extend(maze_actions)
+                action_history.extend([enter_maze] + maze_actions)
+                queue.append((game_copy, base_inv, maze_actions, action_history))
 
             # Handle item collection
             for item in all_items:
                 # Skip collecting lantern unless can is collected
-                if (item == "empty lantern") and ("can" not in game_inv):
+                if item in game_inv or (item == "empty lantern" and "can" not in game_inv):
                     continue
                 item_actions, collected = self.__use_items(item)
                 base_inv.update(collected)
@@ -529,21 +542,11 @@ class SynacorConsole:
 
                 # If override: move twice in the same direction
                 dir_sequence = [direction, direction] if is_dark_passage else [direction]
-                next_actions = future_actions + dir_sequence
-                next_history = action_history + dir_sequence
-                queue.append((game_copy, base_inv, next_actions, next_history))
+                patch_actions = future_actions + dir_sequence
+                next_history  = action_history + dir_sequence
+                queue.append((game_copy, base_inv, patch_actions, next_history))
 
-            # Condition: Check if journal/orb is collected and solve grid puzzle
-            if (room_id == 5141 and "journal" in game_inv and "take orb" in action_history) and not grid_puzzle:
-                grid_actions = self.__solve_grid_puzzle(game_state, pending_actions)
-                base_inv.update("enter maze")
-                future_actions.extend(grid_actions)
-                action_history.append("enter maze")
-                action_history.extend(grid_actions)
-                queue.append((game_copy, base_inv, future_actions, action_history))
-                grid_puzzle = True
-
-        print("Steps:",steps)
+        print("Steps:",steps, "Total Solutions:", len(complete_solution))
         return complete_solution, self.challenge_codes
 
     def __restructure_commands(self, command_list):
@@ -563,10 +566,10 @@ class SynacorConsole:
     def auto_play(self):
         """Automatic playthrough using the bfs exploration."""
         game_commands, bfs_times = self.bfs_exploration()
-        regrouped_commands = self.__restructure_commands(game_commands[0])
-
+        restructured_commands = self.__restructure_commands(game_commands[0])
         full_game_run = self.console.replicate()
-        for action_group in regrouped_commands:
+
+        for action_group in restructured_commands:
             if action_group == "patched software":
                 if self.visualize:
                     print(self.patch_code_str)
@@ -574,11 +577,10 @@ class SynacorConsole:
             elif action_group == "enter maze":
                 rendered_maze = self.render_grid(self.maze_grid)
                 if self.visualize:
-                    print(f"        Math Maze Discovered:")
-                    for line in rendered_maze:
-                        print(' ' * 15 + line)
+                    print("     Math Maze Discovered:")
+                    print(textwrap.indent("\n".join(rendered_maze), " " * 10))
             else:
                 *_, full_terminal = full_game_run.run_computer(action_group)
-                # if self.visualize:
-                #     self.display_terminal(full_terminal, action_group)
-        return regrouped_commands, bfs_times
+                if self.visualize:
+                    self.display_terminal(full_terminal, action_group)
+        return restructured_commands, bfs_times
