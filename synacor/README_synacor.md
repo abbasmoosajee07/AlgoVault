@@ -79,6 +79,14 @@ A(m - 1, k) & \text{if } n = 0 \text{ and } m > 2 \\\\
 A(m - 1, A(m, n - 1)) & \text{otherwise}
 \end{cases}
 $$
+
+---
+
+### Maze Grid Puzzle
+
+- Reading the journal provides a series of entries that tell you the next step is a math based grid.
+- First, you need to map out the complete grid, before solving it to get the desired instructions.
+
 ---
 ## Dependencies
 - Python 3.8+
