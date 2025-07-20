@@ -1,5 +1,5 @@
 import os, re, time, copy, textwrap
-import html, hashlib, itertools, operator
+import html, hashlib, itertools, psutil
 from collections import defaultdict, deque
 from IPython.display import display, HTML
 from VirtualMachine import VirtualMachine
@@ -18,8 +18,10 @@ class SynacorConsole:
 
         self.console = VirtualMachine(software)
 
-        self.patched_software = None
+        self.end_game = "Congratulations; you have reached the end of the challenge!"
+        self.benchmarks = ["Benchmark Results..."]
         self.overall_commands = []
+        self.patched_software = None
         self.maze_grid = None
 
         self.challenge_codes = defaultdict(tuple)
@@ -32,7 +34,22 @@ class SynacorConsole:
         # Preload spec code
         self.__extract_codes(" ", [spec_code])
 
-    def mirror_image(self, string):
+    @staticmethod
+    def get_current_memory_mb():
+        process = psutil.Process()
+        mem_bytes = process.memory_info().rss
+        return round(mem_bytes / (1024 * 1024), 2)
+
+    @staticmethod
+    def md5_hash(code):
+        return hashlib.md5(code.encode('utf-8')).hexdigest()
+
+    def __room_id(self, room_description):
+        h = self.md5_hash(room_description.strip())
+        # Take first 4 hex digits, convert to int, and mod 10000 to get a 4-digit number
+        return int(h[:8], 16) % 10000
+
+    def mirror_string(self, string):
         """Return the mirror image of a string with mirrored 'b', 'p', 'q', 'd'."""
         mirror_map = {"b": "d", "p": "q", "q": "p", "d": "b"}
         return re.sub(r"[bpqd]", lambda m: mirror_map[m.group()], string[::-1])
@@ -47,7 +64,7 @@ class SynacorConsole:
             # Special case: extract quoted words and mirror them
             all_strings = re.findall(r'"(\w+)"', text)
             self.valid_codes.update(all_strings)
-            codes.extend(self.mirror_image(s) for s in all_strings)
+            codes.extend(self.mirror_string(s) for s in all_strings)
         else:
             # General case: extract mixed-case challenge codes
             codes.extend(re.findall(r"[A-Za-z]*[a-z]+[A-Z]+[a-z]+[A-Za-z]*", text))
@@ -63,15 +80,6 @@ class SynacorConsole:
                 )
                 self.prev_time = current_time
                 self.valid_codes.add(code)
-
-    @staticmethod
-    def md5_hash(code):
-        return hashlib.md5(code.encode('utf-8')).hexdigest()
-
-    def __room_id(self, room_description):
-        h = self.md5_hash(room_description.strip())
-        # Take first 4 hex digits, convert to int, and mod 10000 to get a 4-digit number
-        return int(h[:8], 16) % 10000
 
     def __solve_coins_slot(self, inventory, game_copy, equation):
         word_to_num = {
@@ -210,18 +218,21 @@ class SynacorConsole:
         self.__extract_codes(current_terminal)
         if self.visualize:
             self.display_terminal(current_terminal, actions)
+        if self.end_game in current_terminal:
+            self.benchmarks.append(f"          Game Time: {time.time() - self.start_time:.5f}s")
+            self.benchmarks.append(f" Final Memory Usage: {self.get_current_memory_mb()} MB")
         return self.overall_commands, self.challenge_codes
 
     def __parse_game_state(self, terminal):
         lines = terminal.splitlines()
-        location, description, things, exits = ("", "", [], [])
+        location, purpose, things, exits = ("", "", [], [])
 
         current_section = None
         for line_no, line in enumerate(lines):
             line = line.strip()
             if line.startswith("==") and line.endswith("=="):
                 location = line.strip("= ").strip()
-                description = lines[line_no + 1]
+                purpose = lines[line_no + 1]
             elif line.startswith("Things of interest here:"):
                 current_section = "things"
             elif line.startswith("There") and "exit" in line:
@@ -235,7 +246,7 @@ class SynacorConsole:
             else:
                 current_section = None
 
-        return location, description, things, exits
+        return location, purpose, things, exits
 
     def __use_items(self, item):
         """Return actions to collect and use the item, and what items will be added to inventory."""
@@ -354,7 +365,7 @@ class SynacorConsole:
         self.maze_grid = (maze_dict, (start, goal), int(eq_sum))
         return maze_dict
 
-    def render_grid(self, grid_props):
+    def render_maze(self, grid_props):
         """Render a 2D grid dictionary with (y, x) coordinates into a string with visual spacing."""
         maze_dict, (start, goal), eq_sum = grid_props
         if not maze_dict:
@@ -365,7 +376,6 @@ class SynacorConsole:
         ys = [y for y, _ in maze_dict.keys()]
         min_x, max_x = min(xs), max(xs)
         min_y, max_y = min(ys), max(ys)
-
 
         output = []
 
@@ -401,56 +411,98 @@ class SynacorConsole:
         return output
 
     def traverse_maze(self, grid_props):
-        maze_dict, (start, goal), eq_sum = grid_props
-        # print(maze_dict)
-        print((start, goal), type(eq_sum))
+        dirs = self.DIRECTIONS
+        init_dict, (start, goal), eq_sum = grid_props
 
-        # return []
-        return [
-            'north','east','east','north','west','south','east','east','west','north','north','east','vault',
-            ]
+        # Convert initial character-based grid to operator/function-based grid
+        maze_dict = {
+            pos: EquationParser.OP_DICT[char] if char in EquationParser.OP_DICT else int(char)
+            for pos, char in init_dict.items()
+        }
 
-    def __solve_grid_puzzle(self, game_copy, pending_actions):
-        maze_copy = game_copy.replicate()
-        maze_formed = self.build_maze(maze_copy, pending_actions)
-        rendered_maze = self.render_grid(self.maze_grid)
-        print("\n".join(rendered_maze))
-        maze_steps = self.traverse_maze(self.maze_grid)
-        return ["take orb"] + maze_steps
+        start_val = maze_dict[start]
+        queue = deque([(start, start_val, [])])  # (position, current value, path so far)
+        seen = set([(start, start_val)])
+        maze_paths = []
 
-    def bfs_exploration(self):
+        while queue:
+            pos, val, path = queue.popleft()
+            current_cell = maze_dict[pos]
+
+            for dir_name, (dr, dc) in dirs.items():
+                new_pos = (pos[0] + dr, pos[1] + dc)
+                if new_pos not in maze_dict or new_pos == start:
+                    continue
+
+                next_cell = maze_dict[new_pos]
+
+                if isinstance(next_cell, int):
+                    # Can only apply operator to a number
+                    if callable(current_cell):
+                        new_val = current_cell(val, next_cell)
+                    else:
+                        continue  # Invalid: number followed by number
+                elif callable(next_cell):
+                    # Transition from number to operator: carry value forward
+                    new_val = val
+                else:
+                    continue  # Should never hit: malformed input
+
+                state = (new_pos, new_val)
+                if state in seen:
+                    continue
+                seen.add(state)
+
+                if new_pos == goal:
+                    if new_val == eq_sum:
+                        maze_paths.append(path + [dir_name])
+                        return maze_paths  # Stop after first valid path
+                    continue
+
+                queue.append((new_pos, new_val, path + [dir_name]))
+
+        return maze_paths
+
+    def bfs_exploration(self, reset_deque = False):
         """Perform BFS to explore and map out the game world."""
         collect_coins = {"concave coin", "shiny coin", "red coin", "blue coin", "corroded coin"}
         coins_puzzle, mystery_puzzle, grid_puzzle = (False, False, False)
         visited, complete_solution = (set(), [])
-        steps,  MAX_STEPS = (0, 1500)
+        max_bfs_queue, peak_memory = (0, 0)
+        steps,  MAX_STEPS = (0, 10000)
 
         # Each entry: (console_state, pending_actions, path_so_far, action_history)
         # Use deque for efficient popping from the left
-        queue = deque([(self.console.replicate(), set(), [], [])])
+        queue = deque([(self.console, set(), [], [])])
 
         while queue and steps < MAX_STEPS:
-            game_state, game_inv, pending_actions, action_history = queue.popleft()
+            max_bfs_queue = max(max_bfs_queue, len(queue))
+            peak_memory = max(peak_memory, self.get_current_memory_mb())
+            init_game, game_inv, pending_actions, action_history = queue.popleft()
             future_actions = []
             steps += 1
 
             # Run actions on a fresh copy of the game state
-            game_copy = game_state.replicate(steps)
-            *_, last_terminal = game_copy.run_computer(pending_actions)
+            game_version = init_game.replicate(steps)
+            *_, last_terminal = game_version.run_computer(pending_actions)
             self.__extract_codes(last_terminal)
 
-            if "Congratulations; you have reached the end of the challenge!" in last_terminal:
+            if self.end_game in last_terminal:
                 complete_solution.append(action_history[:])
-                continue
+                if reset_deque:
+                    break
+                else:
+                    continue
 
             # Parse game state
             room, purpose, all_items, room_exits = self.__parse_game_state(last_terminal)
             room_id = self.__room_id(purpose)
 
             # Skip if already visited with current inventory
-            if (room_id, tuple(game_inv)) in visited:
+            game_state = (room_id, tuple(game_inv))
+            if game_state in visited:
                 continue
-            visited.add((room_id, tuple(game_inv)))
+            visited.add(game_state)
 
             # Clone game_inv for branching paths
             base_inv = game_inv.copy()
@@ -459,37 +511,41 @@ class SynacorConsole:
             if room_id == 7578 and collect_coins.issubset(game_inv):
                 if not coins_puzzle:
                     equation = next((line.strip() for line in last_terminal.splitlines() if " = " in line), None)
-                    coin_solution = self.__solve_coins_slot(game_inv, game_copy, equation)
+                    coin_solution = self.__solve_coins_slot(game_inv, game_version, equation)
                     coins_puzzle = True
-                    queue = deque([]) #* RESET queue deque, to delete unexplored paths and improve speed
+                    if reset_deque:
+                        queue = deque([]) #* RESET queue deque, to delete unexplored paths and improve speed
                 action_history.extend(coin_solution)
                 future_actions.extend(coin_solution)
                 base_inv = (game_inv - collect_coins) | {"all coins used"}
-                queue.append((game_copy, base_inv, coin_solution, action_history))
+                queue.appendleft((game_version, base_inv, coin_solution, action_history))
 
-            # Condition: Check IF strange book has been collected and in correct room
+            # Condition: Check IF strange book is collected and in correct room
             if room_id == 6393 and {"strange book"}.issubset(game_inv):
                 if not mystery_puzzle:
-                    patched_software, _ = self.build_software_patch(game_copy, action_history)
+                    patched_software, _ = self.build_software_patch(game_version, action_history)
                     patch_actions, software = (["use teleporter"], "patched software")
                     mystery_puzzle = True
-                    queue = deque([]) #* RESET queue deque, to delete unexplored paths and improve speed
-                base_inv.add(software)
-                game_copy.monkey_patching(patched_software)
+                    if reset_deque:
+                        queue = deque([]) #* RESET queue deque, to delete unexplored paths and improve speed                base_inv.add(software)
+                game_version.monkey_patching(patched_software)
                 action_history.extend([software] + patch_actions)
-                queue.append((game_copy, base_inv, patch_actions, action_history))
+                queue.appendleft((game_version, base_inv, patch_actions, action_history))
 
-            # Condition: Check if journal/orb is collected and in correct room
+            # Condition: Check IF journal/orb is collected and in correct room
             if room_id == 5141 and {"journal", "orb"}.issubset(game_inv):
                 if not grid_puzzle:
-                    maze_actions = self.__solve_grid_puzzle(game_state, pending_actions)
-                    grid_puzzle = True
+                    self.build_maze(init_game.replicate(), pending_actions)
+                    maze_steps = self.traverse_maze(self.maze_grid)
+                    maze_actions = ["take orb"] + maze_steps[0]
                     enter_maze = "enter maze"
-                    queue = deque([]) #* RESET queue deque, to delete unexplored paths and improve speed
+                    if reset_deque:
+                        queue = deque([]) #* RESET queue deque, to delete unexplored paths and improve speed                    grid_puzzle = True
                 base_inv.add(enter_maze)
                 future_actions.extend(maze_actions)
                 action_history.extend([enter_maze] + maze_actions)
-                queue.append((game_copy, base_inv, maze_actions, action_history))
+                queue.appendleft((game_version, base_inv, maze_actions, action_history))
+                # continue
 
             # Handle item collection
             for item in all_items:
@@ -500,7 +556,7 @@ class SynacorConsole:
                 base_inv.update(collected)
                 future_actions.extend(item_actions)
                 action_history.extend(item_actions)
-                queue.append((game_copy, base_inv, future_actions, action_history))
+                queue.appendleft((game_version, base_inv, future_actions, action_history))
 
             # Explore exits
             for direction in room_exits:
@@ -510,9 +566,13 @@ class SynacorConsole:
                 dir_sequence = [direction, direction] if is_dark_passage else [direction]
                 patch_actions = future_actions + dir_sequence
                 next_history  = action_history + dir_sequence
-                queue.append((game_copy, base_inv, patch_actions, next_history))
+                queue.appendleft((game_version, base_inv, patch_actions, next_history))
 
-        print("Steps:",steps, "| Total Solutions:", len(complete_solution))
+        self.benchmarks.append(f" Maximum Queue Size: {max_bfs_queue}")
+        self.benchmarks.append(f" All Paths Explored: {steps} steps")
+        self.benchmarks.append(f"     Total BFS Time: {time.time() - self.start_time:.5f}s")
+        self.benchmarks.append(f"  Peak Memory Usage: {peak_memory} MB")
+
         return complete_solution, self.challenge_codes
 
     def __restructure_commands(self, command_list):
@@ -529,19 +589,20 @@ class SynacorConsole:
             regrouped_commands.append(current_group)
         return regrouped_commands
 
-    def auto_play(self):
+    def auto_play(self, reset_deque = False):
         """Automatic playthrough using the bfs exploration."""
-        game_commands, bfs_times = self.bfs_exploration()
+        game_commands, bfs_times = self.bfs_exploration(reset_deque)
         restructured_commands = self.__restructure_commands(game_commands[0])
-        full_game_run = self.console.replicate()
+        self.final_run = time.time()
 
+        full_game_run = self.console.replicate()
         for action_group in restructured_commands:
             if action_group == "patched software":
                 if self.visualize:
                     print(self.patch_code_str)
                 full_game_run.monkey_patching(self.patched_software)
             elif action_group == "enter maze":
-                rendered_maze = self.render_grid(self.maze_grid)
+                rendered_maze = self.render_maze(self.maze_grid)
                 if self.visualize:
                     print("     Math Maze Discovered:")
                     print(textwrap.indent("\n".join(rendered_maze), " " * 10))
@@ -549,4 +610,17 @@ class SynacorConsole:
                 *_, full_terminal = full_game_run.run_computer(action_group)
                 if self.visualize:
                     self.display_terminal(full_terminal, action_group)
+
+        self.benchmarks.append(f"     Speed Run Time: {time.time() - self.final_run:.5f}s")
+        self.benchmarks.append(f" Final Memory Usage: {self.get_current_memory_mb()} MB")
         return restructured_commands, bfs_times
+
+    def benchmark_solution(self):
+        self.benchmarks.append(f"\nBreakdown of Timings by each Code Collected:")
+        for (code_no, code_props) in self.challenge_codes.items():
+            (code, code_hash, code_time, total_time) = code_props
+            self.benchmarks.append(f"Code {code_no}: {code:12} -> {code_hash} |" +
+                f" Times: Code = {code_time:>9}, Total = {total_time:>9}")
+        print('\n'.join(self.benchmarks))
+        return self.benchmarks
+

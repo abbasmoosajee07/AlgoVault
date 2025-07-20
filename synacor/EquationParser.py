@@ -2,7 +2,7 @@ import re, operator
 
 class EquationParser:
     OP_DICT = {
-        '+': operator.add, '-': operator.sub,  '*': operator.mul, '**': operator.pow
+        '+': operator.add, '-': operator.sub, '*': operator.mul, '**': operator.pow
     }
 
     def __init__(self, equation_str):
@@ -13,9 +13,14 @@ class EquationParser:
         self.has_placeholders = bool(self.indices)
 
     def evaluate(self, values=None):
-        """Evaluate the equation.
-        If values are provided, fill them into placeholders. If not, assume equation is fully concrete.
-        """
+        """Returns True if evaluated expression equals the target RHS."""
+        return self._compute(values, check=True)
+
+    def calculate_value(self, values=None):
+        """Returns the evaluated integer result of the LHS expression."""
+        return self._compute(values, check=False)
+
+    def _compute(self, values, check):
         expr = self.parts[:]
         if self.has_placeholders:
             assert values is not None and len(values) == len(self.indices)
@@ -25,7 +30,7 @@ class EquationParser:
         expr_str = ''.join(expr).replace("^", "**")
         tokens = re.findall(r'\d+|[\+\-\*]{1,2}', expr_str)
         result = self._evaluate_tokens(tokens)
-        return result == self.rhs
+        return result == self.rhs if check else result
 
     def _evaluate_tokens(self, tokens):
         for prec in (["**"], ["*"], ["+", "-"]):
@@ -48,6 +53,5 @@ class EquationParser:
         return stack
 
     def to_callable(self):
-        """Return a function taking a tuple of values to test the equation."""
         assert self.has_placeholders
         return lambda p: self.evaluate(p)
