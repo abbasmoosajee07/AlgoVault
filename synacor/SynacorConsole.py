@@ -1,10 +1,10 @@
-import os, re, time, copy, textwrap
+import os, re, time, copy, textwrap, gc
 import html, hashlib, itertools, psutil
 from collections import defaultdict, deque
 from IPython.display import display, HTML
+from EquationParser import EquationParser
 from VirtualMachine import VirtualMachine
 from VM_Disassembler import VM_Disassembler
-from EquationParser import EquationParser
 
 class SynacorConsole:
     DIRECTIONS = {
@@ -80,43 +80,6 @@ class SynacorConsole:
                 )
                 self.prev_time = current_time
                 self.valid_codes.add(code)
-
-    def __solve_coins_slot(self, inventory, game_copy, equation):
-        word_to_num = {
-            "two": 2, "three": 3, "four": 4, "five": 5,
-            "six": 6, "seven": 7, "eight": 8, "nine": 9,
-            "digon": 2, "triangle": 3, "square": 4, "pentagon": 5,
-            "hexagon": 6, "heptagon": 7, "octagon": 8, "nonagon": 9,
-        }
-
-        coin_items = [item for item in inventory if "coin" in item]
-        look_coins = [f"look {item}" for item in coin_items]
-
-        coin_game = game_copy.replicate()
-        *_, final_terminal = coin_game.run_computer(look_coins)
-        coin_lines = [line for line in final_terminal.splitlines() if "coin" in line]
-
-        # Build coin_dict: shape/number -> coin item name
-        coin_dict = defaultdict(str)
-        for item in coin_items:
-            coin_type = item.replace("coin", "").strip()
-            coin_type = "rounded" if coin_type == "concave" else coin_type
-
-            matching_line = next((line for line in coin_lines if coin_type in line), "")
-            match = next((num for word, num in word_to_num.items() if word in matching_line), None)
-
-            if match:
-                coin_dict[match] = item
-
-        parser = EquationParser(equation)
-        equation_func = parser.to_callable()
-
-        # Solve the equation by trying permutations of the coin values
-        solution = next(filter(equation_func, itertools.permutations(coin_dict.keys())))
-
-        # Use coins in the determined order
-        use_coins = [f"use {coin_dict[num]}" for num in solution]
-        return look_coins + use_coins
 
     def __format_terminal(self, text, code_color, input_color):
         """Highlight any detected code-like strings in the terminal."""
@@ -260,6 +223,43 @@ class SynacorConsole:
             return [f"take {item}"], {item}
         else:
             return [f"take {item}", f"use {item}"], {item}
+
+    def __solve_coins_slot(self, inventory, game_copy, equation):
+        word_to_num = {
+            "two": 2, "three": 3, "four": 4, "five": 5,
+            "six": 6, "seven": 7, "eight": 8, "nine": 9,
+            "digon": 2, "triangle": 3, "square": 4, "pentagon": 5,
+            "hexagon": 6, "heptagon": 7, "octagon": 8, "nonagon": 9,
+        }
+
+        coin_items = [item for item in inventory if "coin" in item]
+        look_coins = [f"look {item}" for item in coin_items]
+
+        coin_game = game_copy.replicate()
+        *_, final_terminal = coin_game.run_computer(look_coins)
+        coin_lines = [line for line in final_terminal.splitlines() if "coin" in line]
+
+        # Build coin_dict: shape/number -> coin item name
+        coin_dict = defaultdict(str)
+        for item in coin_items:
+            coin_type = item.replace("coin", "").strip()
+            coin_type = "rounded" if coin_type == "concave" else coin_type
+
+            matching_line = next((line for line in coin_lines if coin_type in line), "")
+            match = next((num for word, num in word_to_num.items() if word in matching_line), None)
+
+            if match:
+                coin_dict[match] = item
+
+        parser = EquationParser(equation)
+        equation_func = parser.to_callable()
+
+        # Solve the equation by trying permutations of the coin values
+        solution = next(filter(equation_func, itertools.permutations(coin_dict.keys())))
+
+        # Use coins in the determined order
+        use_coins = [f"use {coin_dict[num]}" for num in solution]
+        return look_coins + use_coins
 
     def __debug_vm(self, test_console):
         """
@@ -467,7 +467,7 @@ class SynacorConsole:
         """Perform BFS to explore and map out the game world."""
         collect_coins = {"concave coin", "shiny coin", "red coin", "blue coin", "corroded coin"}
         coins_puzzle, mystery_puzzle, grid_puzzle = (False, False, False)
-        visited, complete_solution = (set(), [])
+        visited, complete_solution = (set(), list())
         max_bfs_queue, peak_memory = (0, 0)
         steps,  MAX_STEPS = (0, 10000)
 
@@ -545,7 +545,6 @@ class SynacorConsole:
                 future_actions.extend(maze_actions)
                 action_history.extend([enter_maze] + maze_actions)
                 queue.appendleft((game_version, base_inv, maze_actions, action_history))
-                # continue
 
             # Handle item collection
             for item in all_items:
@@ -623,4 +622,3 @@ class SynacorConsole:
                 f" Times: Code = {code_time:>9}, Total = {total_time:>9}")
         print('\n'.join(self.benchmarks))
         return self.benchmarks
-

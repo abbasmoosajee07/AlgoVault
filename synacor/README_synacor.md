@@ -90,6 +90,12 @@ $$
 
 - Reading the journal provides a series of entries that tell you the next step is a math based grid.
 - First, you need to map out the complete grid, before solving it to get the desired instructions.
+- Mini BFS solution to find the perfect path through the maze that validates the target value.
+
+## Benchmarking
+- Total Paths Explored and Max queue ize at any given point.
+- Time for BFS and Peak Memory Use.
+- Individual breakdown of how long it took to obtain each code in the BFS.
 
 ---
 ## Dependencies
