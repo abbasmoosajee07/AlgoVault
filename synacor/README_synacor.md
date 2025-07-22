@@ -113,3 +113,8 @@ To launch the automated console:
 ```python
 console = SynacorConsole(software=program_bytes, spec_code="startCodeHere")
 console.auto_play()
+```
+
+## Testing Different Versions
+- The main difference between all the solutions seems to be the software patch, which shouldnt significantly affect the overall speed or path of the solution.
+- A Test was conducted in `version_testing.jpynb` to compare the solutions, of all 8 versions procured and to allow for easy checking of the codes by their md5 hashes/
