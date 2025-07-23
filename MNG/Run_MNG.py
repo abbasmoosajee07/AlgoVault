@@ -1,8 +1,8 @@
 # Challenge - 2025
 # # Solved in {2025}
-# Puzzle Link: https://i18n-puzzles.com/
+# Puzzle Link: https://mng.quest
 # Solution by: [Abbas Moosajee]
-# Brief: [Run all i18n scripts]
+# Brief: [Run all MNG scripts]
 
 #!/usr/bin/env python3
 import os
