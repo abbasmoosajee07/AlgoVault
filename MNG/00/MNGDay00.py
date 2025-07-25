@@ -1,25 +1,26 @@
 """Marches And Gnatts - Puzzle 0
-Solution Started: Jul 22, 2025
-Puzzle Link: https://mng.quest/quest/0/
+Solution Started: Jul 25, 2025
+Puzzle Link: https://mng.quest/quest/tutorial
 Solution by: Abbas Moosajee
-Brief: [Code/Problem Description]
+Brief: [Binary Increment]
 """
 
 #!/usr/bin/env python3
 
-import os, re, copy, time
-import numpy as np
-import pandas as pd
-import matplotlib.pyplot as plt
-start_time = time.time()
+import os, re, copy, time, sys
 
-# Load the input data from the specified file path
-D00_file = "Day00_input.txt"
-D00_file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), D00_file)
+turing_path = os.path.join(os.path.dirname(__file__), "..", "TuringMachine")
+sys.path.append(turing_path)
+from TuringMachine import MachineLogic, TuringConfig, TuringMachine
 
-# Read and sort input data into a grid
-with open(D00_file_path) as file:
-    input_data = file.read().strip().split('\n')
-# print(input_data)
-print(2 * 2)
-print(f"Execution Time = {time.time() - start_time:.5f}s")
+init_rules = """
+    INIT | FIND | R
+    FIND | FIND | R
+    FIND _ HALT | R
+    """
+init_tape = "||||"
+
+if __name__ == "__main__":
+    _, results, used_resources = TuringMachine(init_rules).run_machine(init_tape, play_type = 0, visualize=True)
+    print_info = results + [""] + used_resources
+    print("\n".join(print_info))
