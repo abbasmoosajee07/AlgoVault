@@ -1,12 +1,11 @@
 import os, re, copy, time, psutil
-from LogicMill import LogicMill, ERROR
+from LogicMill import LogicMill, TuringConfig
 
 class TuringMachine:
-    LEFT  = "L"
-    RIGHT = "R"
-    BLANK = "_"
-    COMMENT_PREFIX = "//"
-    TransitionType = tuple[str, str, str, str, str]
+    LEFT  = TuringConfig.LEFT
+    RIGHT = TuringConfig.RIGHT
+    BLANK = TuringConfig.BLANK
+    COMMENT_PREFIX = TuringConfig.COMMENT_PREFIX
 
     def __init__(self):
         self.init_time = self.get_timestamp()
@@ -22,7 +21,10 @@ class TuringMachine:
         mem_bytes = process.memory_info().rss  # Resident Set Size (physical memory)
         return round(mem_bytes / (1024 * 1024), 2)  # Convert bytes to MB
 
-    def parse_transition_rules(self, transition_rules_str: str) -> list[TransitionType]:
+    def parse_transition_rules(
+        self,
+        transition_rules_str: str
+        ) -> list[TuringConfig.TransitionType]:
         """
         Parse a string into a list of transition rules for the logic mill.
         Args:
@@ -36,7 +38,7 @@ class TuringMachine:
             ValueError: If a rule is invalid (e.g., wrong number of tokens or invalid direction).
         """
 
-        transitions_list = []
+        transitions_list: list[TuringConfig.TransitionType] = []
         raw_rule_list = transition_rules_str.split("\n")
         for raw_line in raw_rule_list:
             line = raw_line.strip()
@@ -48,11 +50,17 @@ class TuringMachine:
             values = [val for val in line.split(" ") if val.strip()]
 
             if len(values) != 5:
-                raise ValueError(f"Invalid transition rule (expected 5 elements): Recieved {len(values)} elements in line \n'{line}'")
+                raise TuringConfig.InvalidTransitionError(
+                    f"Invalid transition: {values}. Expected 5 elements got {len(values)}  ",
+                )
 
             current_state, current_symbol, new_state, new_symbol, direction = values
             if direction not in (self.LEFT, self.RIGHT):
-                raise ValueError(f"Invalid move direction '{direction}' in rule: '{line}'")
+                raise TuringConfig.InvalidTransitionError(f"Invalid moveDirection: {direction}. Must be L or R")
+
+            for symbol, label in [(current_symbol, "current"), (new_symbol, "new")]:
+                if len(symbol) != 1:
+                    raise TuringConfig.InvalidSymbolError(f"Invalid {label}_symbol: {symbol!r}. Must be a single character.")
 
             transitions_list.append((current_state, current_symbol, new_state, new_symbol, direction))
         return transitions_list
@@ -63,5 +71,4 @@ class TuringMachine:
         result, steps = mill.run_logic(init_tape, visualize =True)
         # print(f"Result: '{result}', Steps: {steps}")
 
-        return
-
+        return transition_rules
