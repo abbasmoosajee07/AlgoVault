@@ -14,8 +14,8 @@ from pathlib import Path
 turing_path = Path(__file__).resolve().parent.parent / "TuringMachineSim"
 sys.path.insert(0, str(turing_path))
 
-from TuringMachine import TuringMachine
-from TuringGUI import TuringGUI
+from TuringModules import TuringMachine, TuringGUI
+
 
 init_rules = """
     INIT | FIND | R
@@ -30,4 +30,4 @@ if __name__ == "__main__":
     print_info = results + [""] + used_resources
     print("\n".join(print_info))
 
-    _, results, used_resources = TuringGUI(init_rules).run_simulator(init_tape)
+    # _, results, used_resources = TuringGUI(init_rules).run_simulator(init_tape)
