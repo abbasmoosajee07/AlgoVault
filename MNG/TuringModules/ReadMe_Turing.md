@@ -46,13 +46,38 @@ A wrapper for setting up and running the Turing machine from human-readable inst
 
 ---
 
-## 📝 Example Usage
+### 4. `Turing_GUI` — Graphical User Interface Layer
+
+A Tkinter-based GUI for stepping through and visualizing Turing machine execution.
+
+#### Features:
+
+* **Tape Visualization**: 21-cell window with current head position highlighted using a red border.
+
+* **Interactive Controls**
+  * `Step`: Run one or more steps manually.
+  * `Run` / `Pause`: Auto-run with adjustable speed.
+  * `Reset`: Reinitialize with original tape.
+
+* **Live Feedback**: Displays current state, step count, and HALTED/STUCK status if applicable.
+
+* **Configurable Speed**
+  * Adjustable delay (ms) and steps per action via entry boxes.
+
+#### Example Usage of both interfaces:
 
 ```python
-tm = TuringMachine("""
-INIT 0 INIT 1 R
-INIT 1 HALT 0 R
-""") # Flip binary state
+init_rules = """
+    INIT | FIND | R
+    FIND | FIND | R
+    FIND _ HALT | R
+    """
 
-_, results, usage = tm.run_machine("001", visualize=True)
+init_tape = "||||"
 
+# Turing Machine Basic Run
+_, basic_results, basic_resources = TuringMachine(init_rules).run_machine(init_tape, play_type = 0, visualize=True)
+
+# Turing Machine GUI Interface
+_, gui_results, gui_resources = TuringGUI(init_rules).run_simulator(init_tape)
+```

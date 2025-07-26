@@ -33,6 +33,16 @@ class TuringConfig:
     })
     """Exception raised when a transition is missing (parsing)."""
 
+    @staticmethod
+    def get_timestamp() -> float:
+        return time.time()
+
+    @staticmethod
+    def get_current_memory_mb() -> float:
+        process = psutil.Process()
+        mem_bytes = process.memory_info().rss  # Resident Set Size (physical memory)
+        return round(mem_bytes / (1024 * 1024), 2)  # Convert bytes to MB
+
 class MachineLogic:
     """Logic Mill Implementation"""
 
@@ -276,19 +286,10 @@ class TuringMachine:
     COMMENT_PREFIX = TuringConfig.COMMENT_PREFIX
 
     def __init__(self, instructions):
-        self.init_time = self.get_timestamp()
-        self.init_memory = self.get_current_memory_mb()
+        self.instructions = instructions
+        self.init_time = TuringConfig.get_timestamp()
+        self.init_memory = TuringConfig.get_current_memory_mb()
         self.transition_rules = self.parse_transition_rules(instructions)
-
-    @staticmethod
-    def get_timestamp() -> float:
-        return time.time()
-
-    @staticmethod
-    def get_current_memory_mb() -> float:
-        process = psutil.Process()
-        mem_bytes = process.memory_info().rss  # Resident Set Size (physical memory)
-        return round(mem_bytes / (1024 * 1024), 2)  # Convert bytes to MB
 
     def parse_transition_rules(
         self,
@@ -334,7 +335,7 @@ class TuringMachine:
             transitions_list.append((current_state, current_symbol, new_state, new_symbol, direction))
         return transitions_list
 
-    def run_machine(self, init_tape, play_type: 0, visualize: bool = True):
+    def run_machine(self, init_tape, play_type: int = 0, visualize: bool = True):
         """
         Run the Turing machine on the initial tape with optional visualization.
         0: Auto_play
@@ -349,8 +350,8 @@ class TuringMachine:
             final_tape, steps, rules_no = cpu.run_step(init_tape, visualize=visualize)
 
         resources_used = [
-            f"   Time run: {self.get_timestamp() - self.init_time:.5f}s",
-            f"Memory used: {self.get_current_memory_mb()}MB"
+            f"   Time run: {TuringConfig.get_timestamp() - self.init_time:.5f}s",
+            f"Memory used: {TuringConfig.get_current_memory_mb()}MB"
         ]
 
         results = [
@@ -360,16 +361,3 @@ class TuringMachine:
         ]
 
         return transition_rules, results, resources_used
-
-if __name__ == "__main__":
-
-    init_rules = """
-        INIT | FIND | R
-        FIND | FIND | R
-        FIND _ HALT | R
-        """
-    init_tape = "||||"
-
-    _, results, used_resources = TuringMachine(init_rules).run_machine(init_tape, play_type = 1, visualize=True)
-    print_info = results + [""] + used_resources
-    print("\n".join(print_info))

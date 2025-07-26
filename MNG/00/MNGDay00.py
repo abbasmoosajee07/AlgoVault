@@ -8,16 +8,20 @@ Brief: [Binary Increment]
 #!/usr/bin/env python3
 
 import os, re, copy, time, sys
+from pathlib import Path
 
-turing_path = os.path.join(os.path.dirname(__file__), "..", "TuringMachine")
-sys.path.append(turing_path)
-from TuringMachine import MachineLogic, TuringConfig, TuringMachine
+turing_path = Path(__file__).resolve().parent.parent / "TuringModules"
+sys.path.append(str(turing_path))
+
+from TuringModules import TuringMachine, TuringGUI
+
 
 init_rules = """
     INIT | FIND | R
     FIND | FIND | R
     FIND _ HALT | R
     """
+
 init_tape = "||||"
 
 if __name__ == "__main__":
