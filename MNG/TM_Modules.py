@@ -1,21 +1,19 @@
-"""Marches And Gnatts - Puzzle 0
-Solution Started: Jul 25, 2025
-Puzzle Link: https://mng.quest/quest/tutorial
-Solution by: Abbas Moosajee
-Brief: [Binary Increment]
+"""Turing Modules Test
 """
 
 #!/usr/bin/env python3
 
-import os, re, copy, time, sys
+import sys
 from pathlib import Path
 
 # Add the TuringMachineSim folder to path
-turing_path = Path(__file__).resolve().parent.parent / "TuringMachineSim"
+turing_path = Path(__file__).resolve().parent / "TuringMachineSim"
 sys.path.insert(0, str(turing_path))
 
-from TuringMachine import TuringMachine
-from TuringGUI import TuringGUI
+from TuringMachineSim.TuringModules import TuringGUI, TuringMachine
+
+TuringMachine = TuringMachine
+TuringGUI = TuringGUI
 
 init_rules = """
     INIT | FIND | R
