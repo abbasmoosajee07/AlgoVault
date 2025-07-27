@@ -9,3 +9,4 @@ A different spin on fairly basic coding problems, by using a mechanical Turing M
 ## Challenges
 - **Quest 00 - Binary Increment**: Increase the number represented on a tape by one.
 - **Quest 01 - Unary Addition**: Probably the most basic of mathematical functions, addition yet can be made so complicated.
+- **Quest 02 - Unary Even Odd**: Determining if a unary number is even or odd, essentially solved by switching between Odd/Even until printing final state at end.
