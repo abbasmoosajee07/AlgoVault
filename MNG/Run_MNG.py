@@ -25,4 +25,4 @@ if __name__ == "__main__":
     print(f"Repository Directory: {selected_dir}")
 
     # Execute the challenge scripts
-    execute_challenge_scripts(CHALLENGE_NAME, YEAR, DAYS_TO_RUN, selected_dir, NUM_ITERATIONS, COLOR_MNG, save_file=False)
+    execute_challenge_scripts(CHALLENGE_NAME, YEAR, DAYS_TO_RUN, selected_dir, NUM_ITERATIONS, COLOR_MNG, save_file=True)
