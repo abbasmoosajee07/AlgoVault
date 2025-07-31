@@ -11,7 +11,7 @@ from Benchmarks.performance_analysis import create_table
 from Benchmarks.visualization import create_plot
 from Benchmarks.script_runner import run_script
 
-def execute_challenge_scripts(challenge, Year, days_to_run, base_dir, num_iterations=5, center_color="#4CAF50"):
+def execute_challenge_scripts(challenge, Year, days_to_run, base_dir, num_iterations=5, center_color="#4CAF50", save_file = True):
     """
     Execute challenge scripts, aggregate performance statistics, and generate results.
 
@@ -89,15 +89,16 @@ def execute_challenge_scripts(challenge, Year, days_to_run, base_dir, num_iterat
     run_df, table_txt = create_table(file_info, times_taken, peak_memory_usage, num_iterations, Year)
 
     # Save the table to a text file
-    output_file = os.path.join(base_dir, f"{Year}_Run_Summary.txt")
-    with open(output_file, 'w') as f:
-        for line in table_txt:
-            f.write(line + "\n")
-    print(f"Summary saved to {output_file}")
+    if save_file:
+        output_file = os.path.join(base_dir, f"{Year}_Run_Summary.txt")
+        with open(output_file, 'w') as f:
+            for line in table_txt:
+                f.write(line + "\n")
+        print(f"Summary saved to {output_file}")
 
-    # Create plots
-    create_plot(run_df, challenge, Year, num_iterations, base_dir, center_color, scale='linear')
-    create_plot(run_df, challenge, Year, num_iterations, base_dir, center_color, scale='log')
+        # Create plots
+        create_plot(run_df, challenge, Year, num_iterations, base_dir, center_color, scale='linear')
+        create_plot(run_df, challenge, Year, num_iterations, base_dir, center_color, scale='log')
 
     print(f"\nTotal script execution time over {num_iterations} iterations saved to table and plotted.")
 

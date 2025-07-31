@@ -70,6 +70,8 @@ def run_script(file_path):
             process = subprocess.Popen(['ruby', file_path])
         elif extension == '.jl':
             process = subprocess.Popen(['julia', file_path])
+        elif extension == '.js':
+            process = subprocess.Popen(['node', file_path])
         else:
             print(f"Unsupported file type for {file_name}. Skipping.")
             return None

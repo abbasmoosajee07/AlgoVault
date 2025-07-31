@@ -12,8 +12,8 @@ if __name__ == "__main__":
     # Define constants
     YEAR = "MNG"
     CHALLENGE_NAME = 'Marches and Gnatts'
-    DAYS_TO_RUN = range(0, 10)
-    COLOR_2024 = "#CE7004"
+    DAYS_TO_RUN = range(0, 11)
+    COLOR_MNG = "#CE7004"
     NUM_ITERATIONS = 3  # Number of iterations for benchmarking
 
     # Get the directory of the current script
@@ -25,4 +25,4 @@ if __name__ == "__main__":
     print(f"Repository Directory: {selected_dir}")
 
     # Execute the challenge scripts
-    execute_challenge_scripts(CHALLENGE_NAME, YEAR, DAYS_TO_RUN, selected_dir, NUM_ITERATIONS, COLOR_2024)
+    execute_challenge_scripts(CHALLENGE_NAME, YEAR, DAYS_TO_RUN, selected_dir, NUM_ITERATIONS, COLOR_MNG, save_file=False)
