@@ -1,0 +1,4 @@
+
+INIT | FIND _ R
+FIND | FIND | R
+FIND + HALT | R

@@ -1,6 +1,12 @@
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
 import { TuringConfig, MachineLogic } from '../TuringMachineSim/javascript_machine/TuringBrain.js';
 import { TuringMachine } from '../TuringMachineSim/javascript_machine/BasicRunner.js';
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Example usage:
 const rules = `
@@ -39,3 +45,6 @@ const play_test = 0
 const init_tape = "|||*|||"
 sim.run_machine(init_tape, play_test, false);
 
+
+// const outputPath = path.join(__dirname, 'unary_multiplication.txt');
+// fs.writeFileSync(outputPath, rules);
