@@ -16,7 +16,11 @@ A different spin on fairly basic coding problems, by using a mechanical Turing M
 ---
 | Quest #  | Title              | [🔗 Solution]                  |  Steps     |Rules |
 |----------|--------------------|---------------------------------|-----------|-------|
-| Quest 01 | Unary Addition     | [View Solution](01\MNGDay01.py) | 28,143    | 3     |
-| Quest 02 | Unary Even/Odd     | [View Solution](02\MNGDay02.py) | 20,379    | 4     |
-| Quest 03 | Binary Increment   | [View Solution](03\MNGDay03.py) |    652    | 6     |
-| Quest 04 | Unary Multiplication   | [View Solution](04\MNGDay04.py) |1,442,415    | 19     |
+| Quest 01 | Unary Addition     | [View Solution](01\MNGDay01.js) | 28,143    | 3     |
+| Quest 02 | Unary Even/Odd     | [View Solution](02\MNGDay02.js) | 20,379    | 4     |
+| Quest 03 | Binary Increment   | [View Solution](03\MNGDay03.js) |    652    | 6     |
+| Quest 04 | Unary Multiplication   | [View Solution](04\MNGDay04.js) |1,442,415  | 19|
+| Quest 05 | Find Element In Unary Array   | [View Solution](05\MNGDay05.js) | 36,137 |224 |
+| Quest 06 | Unary Subtraction   | [View Solution](06\MNGDay06.js) | 9,578 | 401 |
+
+| Quest 10 | Lines Count   | [View Solution](10\MNGDay10.js) |45,087|2,127 |
