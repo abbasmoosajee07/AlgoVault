@@ -1,9 +1,9 @@
 /**
  * Marches And Gnatts - Puzzle 10
 Solution Started: Aug 7, 2025
-Puzzle Link: https://mng.quest/quest/10/
+Puzzle Link: https://mng.quest/quest/10/lines-count
 Solution by: Abbas Moosajee
-Brief: [Code/Problem Description]
+Brief: [Lines Count]
 
  * Day 10 - Year MNG
  * Author: Abbas Moosajee

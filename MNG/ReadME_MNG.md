@@ -12,6 +12,11 @@ A different spin on fairly basic coding problems, by using a mechanical Turing M
 - **Quest 02 - Unary Even Odd**: Determining if a unary number is even or odd, essentially solved by switching between Odd/Even until printing final state at end.
 - **Quest 03 - Binary Increment**: Increase a binary number by 1. The first solution where you have to evaluate between rules and steps
 - **Quest 04 - Unary Multiplication**: Multiply two unary numbers to produce a result tape.
+- **Quest 05 - Find Element in Unary array**: In an array of unary numbers, find the target number.
+- **Quest 06 - Unary Subtraction**: Subtract two unary numbers to produce a result tape.
+- **Quest 09 - Unary Comparison**: Compare two Unary elements display its result in output tape.
+- **Quest 10 - Lines Count**: Find the number of lines seperated by a symbol.
+- **Quest 11 - Decimal Increment**: Increase the value of a decimal number by 1.
 
 ---
 | Quest #  | Title              | [🔗 Solution]                  |  Steps     |Rules |
@@ -23,4 +28,6 @@ A different spin on fairly basic coding problems, by using a mechanical Turing M
 | Quest 05 | Find Element In Unary Array   | [View Solution](05\MNGDay05.js) | 36,137 |224 |
 | Quest 06 | Unary Subtraction   | [View Solution](06\MNGDay06.js) | 9,578 | 401 |
 
+| Quest 09 | Unary Comparison   | [View Solution](09\MNGDay09.js) | 12,626 | 806 |
 | Quest 10 | Lines Count   | [View Solution](10\MNGDay10.js) |45,087|2,127 |
+| Quest 11 | Decimal Increment   | [View Solution](11\MNGDay11.js) |444| 22|
