@@ -27,5 +27,6 @@ Here's your combined table with all **Quest titles, descriptions, links, steps, 
 | Quest 09 | Unary Comparison            | Compare two unary numbers and output the result.  | [View Solution](09/MNGDay09.js) | 12,626    | 806   |
 | Quest 10 | Lines Count                 | Count the number of lines separated by a symbol.  | [View Solution](10/MNGDay10.js) | 45,087    | 2,127 |
 | Quest 11 | Decimal Increment           | Increment a decimal number by one.                | [View Solution](11/MNGDay11.js) | 444       | 22    |
+| Quest 12 | Decimal Addition           | Add up two decimal numbers.                | [View Solution](11/MNGDay11.js) | 58687       | 118    |
 
 ---
