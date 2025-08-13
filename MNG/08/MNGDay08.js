@@ -6,45 +6,44 @@ Solution by: Abbas Moosajee
 Brief: [Text Mirror]
 */
 
+import { MNG_ARENA } from '../MNG_ARENA.js';
 
-import { TuringConfig, MachineLogic } from '../TuringMachineSim/javascript_machine/TuringBrain.js';
-import { TuringMachine } from '../TuringMachineSim/javascript_machine/BasicRunner.js';
-
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-const lines = ["// hello-world"];
-const valid_letters = "abcdefghijklmnopqrstuvwxyzäöõü-"
+const text_mirror = new MNG_ARENA("text_mirror");
+const valid_letters = "abcdefghijklmnopqrstuvwxyzäöõü-";
 const extra_symbols = ":.";
 
-lines.push("INIT  _ MOVE_L : L");
-lines.push("IGNORE : MOVE_L : L");
-lines.push("MOVE_L . MOVE_L . L");
-lines.push("MOVE_L _ Final _ R");
-lines.push("Final . Final _ R");
-lines.push("Final : HALT _ R");
+// Add initial comment
+text_mirror.add_comment("hello-world");
 
+// Add the main rules
+text_mirror.add_rule("INIT", "_", "MOVE_L", ":", "L");
+text_mirror.add_rule("IGNORE", ":", "MOVE_L", ":", "L");
+text_mirror.add_rule("MOVE_L", ".", "MOVE_L", ".", "L");
+text_mirror.add_rule("MOVE_L", "_", "Final", "_", "R");
+text_mirror.add_rule("Final", ".", "Final", "_", "R");
+text_mirror.add_rule("Final", ":", "HALT", "_", "R");
+
+// Add rules for each valid letter
 for (const char of valid_letters) {
-    lines.push(`INIT ${char} INIT ${char} R`);
-    lines.push(`MOVE_L ${char} COPY_${char} . R`);
+    // INIT state transitions
+    text_mirror.ignore("INIT", char, "R");
 
-    lines.push(`COPY_${char} _ IGNORE ${char} L`);
-    lines.push(`IGNORE ${char} IGNORE ${char} L`);
+    // MOVE_L transitions
+    text_mirror.add_rule("MOVE_L", char, `COPY_${char}`, ".", "R");
 
+    // COPY and IGNORE transitions
+    text_mirror.add_rule(`COPY_${char}`, "_", "IGNORE", char, "L");
+    text_mirror.ignore("IGNORE", char, "L");
+
+    // COPY character transitions for all valid letters and symbols
     for (const ig_char of valid_letters + extra_symbols) {
-        lines.push(`COPY_${char} ${ig_char}  COPY_${char} ${ig_char} R`)
+        text_mirror.ignore(`COPY_${char}`, ig_char, "R");
     }
 }
-const output = lines.join('\n');
 
-const sim = new TuringMachine(output);
-const play_test = 0
-const init_tape  = "hello-world"
-sim.run_machine(init_tape, play_test, true);
 
-// const outputPath = path.join(__dirname, 'text_mirror.txt');
-// fs.writeFileSync(outputPath, output);
+const test_tape  = "hello-world"
+
+text_mirror.benchmark_solution([test_tape, "avogadro", "turing-machine"], false)
+// text_mirror.test_solution(test_tape, true)
+// text_mirror.save_rules(import.meta.url);

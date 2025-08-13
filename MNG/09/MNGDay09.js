@@ -10,41 +10,27 @@ Brief: [Unary Comparison]
  */
 
 
-import { TuringConfig, MachineLogic } from '../TuringMachineSim/javascript_machine/TuringBrain.js';
-import { TuringMachine } from '../TuringMachineSim/javascript_machine/BasicRunner.js';
-
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+import { MNG_ARENA } from '../MNG_ARENA.js';
 
 const MAX_N = 200;
-const lines = [];
+const unary_compare = new MNG_ARENA("unary_comparison");
 
-lines.push("CheckEqual | CheckEqual | L");                   // Loop over equal symbols
-lines.push("CheckEqual > HALT = L");                         // Final check done, halt
-lines.push("CountB_0 > HALT < L");                           // No more B's, halt
-lines.push("CountB_0 _ CheckEqual _ L");                     // If done counting B, move to check
-lines.push("CountB_0 | CountB_0 | L");                       // Stay in same state while scanning
+// Add the main rules using MNG_ARENA methods
+unary_compare.ignore("CheckEqual", "|", "L");
+unary_compare.ignore("CountB_0", "|", "L");
+unary_compare.add_rule("CheckEqual", ">", "HALT", "=", "L");
+unary_compare.add_rule("CountB_0", ">", "HALT", "<", "L");
+unary_compare.add_rule("CountB_0", "_", "CheckEqual", "_", "L");
+unary_compare.add_rule("INIT", "|", "CountA_1", "|", "R");
 
-lines.push("INIT | CountA_1 | R");                           // Begin counting A symbols
-
+// Add the counting rules using a loop
 for (let n = 1; n <= MAX_N; n++) {
-    lines.push(`CountA_${n} | CountA_${n + 1} | R`);         // Count next A
-    lines.push(`CountA_${n} , CountB_${n} > R`);             // Switch to counting B
-    lines.push(`CountB_${n} _ HALT _ L`);                    // No more B, halt
-    lines.push(`CountB_${n} | CountB_${n - 1} | R`);         // Count next B
+    unary_compare.add_rule(`CountA_${n}`, "|", `CountA_${n + 1}`, "|", "R");
+    unary_compare.add_rule(`CountA_${n}`, ",", `CountB_${n}`, ">", "R");
+    unary_compare.add_rule(`CountB_${n}`, "_", "HALT", "_", "L");
+    unary_compare.add_rule(`CountB_${n}`, "|", `CountB_${n - 1}`, "|", "R");
 }
 
-const output = lines.join('\n');
-
-const sim = new TuringMachine(output);
-const play_test = 0
-const init_tape  = "||||,||"
-sim.run_machine(init_tape, play_test, true);
-
-// const outputPath = path.join(__dirname, 'unary_comparison.txt');
-// fs.writeFileSync(outputPath, output);
-
+unary_compare.benchmark_solution(["||||,||", "|||,||||", "|||,|||"], false)
+// unary_compare.test_solution("||||,||", true)
+// unary_compare.save_rules(import.meta.url);

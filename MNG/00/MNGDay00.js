@@ -5,28 +5,17 @@ Puzzle Link: https://mng.quest/quest/tutorial
 Solution by: Abbas Moosajee
 Brief: [Binary Increment]
  */
+import { MNG_ARENA } from '../MNG_ARENA.js';
 
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
-
-import { TuringConfig, MachineLogic } from '../TuringMachineSim/javascript_machine/TuringBrain.js';
-import { TuringMachine } from '../TuringMachineSim/javascript_machine/BasicRunner.js';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-const rules = `
+const unary_inc_rules = `
 INIT | FIND | R
 FIND | FIND | R
 FIND _ HALT | R
 `;
 
-const sim = new TuringMachine(rules);
-const play_test = 0
-const init_tape  = "||||"
-sim.run_machine(init_tape, play_test, true);
-
-// const outputPath = path.join(__dirname, 'unary_increment.txt');
-// fs.writeFileSync(outputPath, rules);
+const unary_inc = new MNG_ARENA("unary_increment")
+unary_inc.full_solution(unary_inc_rules);
+unary_inc.benchmark_solution(["||||", "||", "|||"], false)
+// unary_inc.test_solution("||||", true)
+// unary_inc.save_rules(import.meta.url);
 

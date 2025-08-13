@@ -9,17 +9,9 @@ Brief: [Decimal Increment]
  * Author: Abbas Moosajee
  */
 
-import { TuringConfig, MachineLogic } from '../TuringMachineSim/javascript_machine/TuringBrain.js';
-import { TuringMachine } from '../TuringMachineSim/javascript_machine/BasicRunner.js';
+import { MNG_ARENA } from '../MNG_ARENA.js';
 
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-const output = `// Decimal Increment
+const dec_inc_rules = `// Decimal Increment
 INIT 0 INIT 0 R
 INIT 1 INIT 1 R
 INIT 2 INIT 2 R
@@ -43,13 +35,10 @@ NUM  7 HALT 8 R
 NUM  8 HALT 9 R
 NUM  9 NUM  0 L
 NUM  _ HALT 1 R
-`
+`;
 
-const sim = new TuringMachine(output);
-const play_test = 0
-const init_tape  = "13"
-sim.run_machine(init_tape, play_test, true);
-
-const outputPath = path.join(__dirname, 'decimal_increment.txt');
-fs.writeFileSync(outputPath, output);
-
+const dec_inc = new MNG_ARENA("decimal_increment")
+dec_inc.full_solution(dec_inc_rules);
+dec_inc.benchmark_solution(["13", "41", "69"], false)
+// dec_inc.test_solution("13", true)
+// dec_inc.save_rules(import.meta.url);

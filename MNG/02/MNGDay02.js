@@ -6,28 +6,17 @@ Solution by: Abbas Moosajee
 Brief: [Unary Even Odd]
  */
 
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import { MNG_ARENA } from '../MNG_ARENA.js';
 
-import { TuringConfig, MachineLogic } from '../TuringMachineSim/javascript_machine/TuringBrain.js';
-import { TuringMachine } from '../TuringMachineSim/javascript_machine/BasicRunner.js';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-const rules = `
+const unary_eo_rules = `
 INIT | ODD  _ R
 ODD  | INIT _ R
 ODD  _ HALT O R
 INIT _ HALT E R
 `;
 
-const sim = new TuringMachine(rules);
-const play_test = 0
-const init_tape  = "|||||||"
-sim.run_machine(init_tape, play_test, true);
-
-// const outputPath = path.join(__dirname, 'unary_even_odd.txt');
-// fs.writeFileSync(outputPath, rules);
-
+const unary_even_odd = new MNG_ARENA("unary_even_odd")
+unary_even_odd.full_solution(unary_eo_rules);
+unary_even_odd.benchmark_solution(["|||||||", "|||||", "||||"], false)
+// unary_even_odd.test_solution("|||||||", true)
+// unary_even_odd.save_rules(import.meta.url);

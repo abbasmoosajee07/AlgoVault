@@ -6,17 +6,10 @@ Solution by: Abbas Moosajee
 Brief: [Binary Increment]
  */
 
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
 
-import { TuringConfig, MachineLogic } from '../TuringMachineSim/javascript_machine/TuringBrain.js';
-import { TuringMachine } from '../TuringMachineSim/javascript_machine/BasicRunner.js';
+import { MNG_ARENA } from '../MNG_ARENA.js';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-const rules = `
+const binary_inc_rules = `
 INIT 0 INIT 0 R
 INIT 1 INIT 1 R
 INIT _ FIND _ L
@@ -25,12 +18,8 @@ FIND 0 HALT 1 R
 FIND _ HALT 1 R
 `;
 
-const sim = new TuringMachine(rules);
-const play_test = 0
-const init_tape  = "1010"
-sim.run_machine(init_tape, play_test, true);
-
-// const outputPath = path.join(__dirname, 'unary_binary_inc.txt');
-// fs.writeFileSync(outputPath, rules);
-
-
+const binary_inc = new MNG_ARENA("unary_binary_inc")
+binary_inc.full_solution(binary_inc_rules);
+binary_inc.benchmark_solution(["1010", "111", "1011"], false)
+// binary_inc.test_solution("1010", true)
+// binary_inc.save_rules(import.meta.url);

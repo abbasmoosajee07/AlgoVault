@@ -1,15 +1,7 @@
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
 
-import { TuringConfig, MachineLogic } from '../TuringMachineSim/javascript_machine/TuringBrain.js';
-import { TuringMachine } from '../TuringMachineSim/javascript_machine/BasicRunner.js';
+import { MNG_ARENA } from '../MNG_ARENA.js';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-// Example usage:
-const rules = `
+const unary_mult_rules = `
 INIT  | toB   _ R   // Erase | from a, move to copy b
 INIT  * SKIP  _ R   // All of a consumed, erase '*' and move to HALT
 
@@ -38,13 +30,10 @@ sepL  | sepL  | L
 nextB _ eachB | R   // Go back to copy next '|'
 nextB | nextB | L
 `;
-// console.log("HELLO");
-
-const sim = new TuringMachine(rules);
-const play_test = 0
-const init_tape = "|||*|||"
-sim.run_machine(init_tape, play_test, false);
 
 
-// const outputPath = path.join(__dirname, 'unary_multiplication.txt');
-// fs.writeFileSync(outputPath, rules);
+const unary_mult = new MNG_ARENA("unary_multiplication")
+unary_mult.full_solution(unary_mult_rules);
+unary_mult.benchmark_solution(["||*|||", "||||*|||", "||||||||*|||"], false)
+// unary_mult.test_solution("||*|||", true)
+// unary_mult.save_rules(import.meta.url);

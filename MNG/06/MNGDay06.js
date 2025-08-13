@@ -7,41 +7,32 @@ Brief: [Unary Subtraction]
 
  */
 
-import { TuringConfig, MachineLogic } from '../TuringMachineSim/javascript_machine/TuringBrain.js';
-import { TuringMachine } from '../TuringMachineSim/javascript_machine/BasicRunner.js';
-
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+import { MNG_ARENA } from '../MNG_ARENA.js';
 
 const MAX_N = 100;
-const lines = [];
-lines.push(`INIT | Count_1 _ R`);
+const unary_sub = new MNG_ARENA("unary_subtraction");
+
+// Starting rule
+unary_sub.add_rule("INIT", "|", "Count_1", "_", "R");
 
 for (let n = 1; n <= MAX_N; n++) {
-    lines.push(`Count_${n} | Count_${n + 1}  _   R`);
-    lines.push(`Count_${n} - Sub_${n} _   R`);
+    // Count bars
+    unary_sub.add_rule(`Count_${n}`, "|", `Count_${n + 1}`, "_", "R");
 
-    if ((n-1) > 0) {
-        lines.push(`Sub_${n} | Sub_${n - 1} _ R`);
-        lines.push(`Sub_${n} _ Sub_${n - 1} | R`);
+    // When hitting subtraction marker "-"
+    unary_sub.add_rule(`Count_${n}`, "-", `Sub_${n}`, "_", "R");
+
+    if (n - 1 > 0) {
+        // Perform subtraction
+        unary_sub.add_rule(`Sub_${n}`, "|", `Sub_${n - 1}`, "_", "R");
+        unary_sub.add_rule(`Sub_${n}`, "_", `Sub_${n - 1}`, "|", "R");
     } else {
-        lines.push(`Sub_${n} _   HALT |  R`);
-        lines.push(`Sub_${n} |   HALT _  R`);
+        // When result is zero, HALT
+        unary_sub.add_rule(`Sub_${n}`, "_", "HALT", "|", "R");
+        unary_sub.add_rule(`Sub_${n}`, "|", "HALT", "_", "R");
     }
 }
 
-const output = lines.join('\n');
-
-const sim = new TuringMachine(output);
-const play_test = 0
-const init_tape  = "|||||-||"
-sim.run_machine(init_tape, play_test, true);
-
-// const outputPath = path.join(__dirname, 'unary_subtraction.txt');
-// fs.writeFileSync(outputPath, output);
-
-
+unary_sub.benchmark_solution(["|||||-||", "|||-||", "|-|"], false)
+// unary_sub.test_solution("|||||-||", true)
+// unary_sub.save_rules(import.meta.url);

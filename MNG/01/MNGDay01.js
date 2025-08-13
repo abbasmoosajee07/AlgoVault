@@ -5,26 +5,16 @@ Solution by: Abbas Moosajee
 Brief: [Unary Addition]
  */
 
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import { MNG_ARENA } from '../MNG_ARENA.js';
 
-import { TuringConfig, MachineLogic } from '../TuringMachineSim/javascript_machine/TuringBrain.js';
-import { TuringMachine } from '../TuringMachineSim/javascript_machine/BasicRunner.js';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-const rules = `
+const unary_add_rules = `
 INIT | FIND _ R
 FIND | FIND | R
 FIND + HALT | R
 `;
 
-const sim = new TuringMachine(rules);
-const play_test = 0
-const init_tape  = "|||+||||"
-sim.run_machine(init_tape, play_test, true);
-
-// const outputPath = path.join(__dirname, 'unary_addition.txt');
-// fs.writeFileSync(outputPath, rules);
+const unary_add = new MNG_ARENA("unary_addition")
+unary_add.full_solution(unary_add_rules);
+unary_add.benchmark_solution(["|||+||||", "|+|", "|||+||||"], false)
+// unary_add.test_solution("|||+||||", true)
+// unary_add.save_rules(import.meta.url);

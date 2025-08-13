@@ -8,52 +8,46 @@ Brief: [Find Element in Unary Array]
  * Day 05 - Year MNG
  * Author: Abbas Moosajee
  */
+import { MNG_ARENA } from '../MNG_ARENA.js';
 
-import { TuringConfig, MachineLogic } from '../TuringMachineSim/javascript_machine/TuringBrain.js';
-import { TuringMachine } from '../TuringMachineSim/javascript_machine/BasicRunner.js';
-
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 const MAX_N = 44;
-const lines = [];
-lines.push(`INIT | Count_1 _ R`);
+const unary_array = new MNG_ARENA("unary_array");
 
-// Check elements or traverse until you find `:` marker
+// INIT rule
+unary_array.add_rule("INIT", "|", "Count_1", "_", "R");
+
+// Build rules for counting & finding
 for (let n = 1; n <= MAX_N; n++) {
-    lines.push(`Count_${n} | Count_${n + 1}  _   R`);               // skip unary bars
-    lines.push(`Count_${n} : Find_${n}     _   R`);             // found target
-    lines.push(`Find_${n}  _ HALT  _   R`);
+    // Skip unary bars
+    unary_array.add_rule(`Count_${n}`, "|", `Count_${n + 1}`, "_", "R");
 
+    // Found target marker ":"
+    unary_array.add_rule(`Count_${n}`, ":", `Find_${n}`, "_", "R");
+
+    // HALT when nothing else
+    unary_array.add_rule(`Find_${n}`, "_", "HALT", "_", "R");
+
+    // Bar handling in Find state
     if (n === 1) {
-        lines.push(`Find_${n} | Find_${n} | R`);
+        unary_array.ignore(`Find_${n}`, "|", "R");
     } else {
-        lines.push(`Find_${n} | Find_${n} _ R`);
+        unary_array.add_rule(`Find_${n}`, "|", `Find_${n}`, "_", "R");
     }
 
-    if (n - 1 === 0){
-        lines.push(`Find_${n} , ERASE_ALL _ R`);
-    } else{
-        lines.push(`Find_${n} , Find_${n-1}  _ R`);
+    // Comma handling in Find state
+    if (n - 1 === 0) {
+        unary_array.add_rule(`Find_${n}`, ",", "ERASE_ALL", "_", "R");
+    } else {
+        unary_array.add_rule(`Find_${n}`, ",", `Find_${n - 1}`, "_", "R");
     }
 }
 
-// Cleanup: ERASE_ALL wipes everything to the right
-lines.push(`ERASE_ALL |   ERASE_ALL  _   R`);
-lines.push(`ERASE_ALL ,   ERASE_ALL  _   R`);
-lines.push(`ERASE_ALL _   HALT       _   R`);
+// Cleanup rules: ERASE_ALL wipes everything
+unary_array.add_rule("ERASE_ALL", "|", "ERASE_ALL", "_", "R");
+unary_array.add_rule("ERASE_ALL", ",", "ERASE_ALL", "_", "R");
+unary_array.add_rule("ERASE_ALL", "_", "HALT", "_", "R");
 
-const output = lines.join('\n');
-
-
-const sim = new TuringMachine(output);
-const play_test = 0
-const init_tape  = "||:|||,|||||,||||||||,||||"
-sim.run_machine(init_tape, play_test, true);
-
-// const outputPath = path.join(__dirname, 'unary_array.txt');
-// fs.writeFileSync(outputPath, output);
+unary_array.benchmark_solution(["||:|||,|||||,||||||||,||||", "||:|,||", "|:|"], false)
+// unary_array.test_solution("||:|||,|||||,||||||||,||||", true)
+// unary_array.save_rules(import.meta.url);

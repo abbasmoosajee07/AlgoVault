@@ -8,64 +8,34 @@ Brief: [Lines Count]
  * Day 10 - Year MNG
  * Author: Abbas Moosajee
  */
-import { TuringConfig, MachineLogic } from '../TuringMachineSim/javascript_machine/TuringBrain.js';
-import { TuringMachine } from '../TuringMachineSim/javascript_machine/BasicRunner.js';
-
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-const all_letters = "abcdefghijklmnopqrstuvwxyzäöõü-"
-
-const fewest_steps = [];
-const fewest_rules = [];
-
-for (const char of all_letters) {
-    fewest_steps.push(`INIT ${char} INIT . R`);
-    fewest_rules.push(`INIT ${char} INIT _ R`);
-    fewest_rules.push(`INC ${char} INC ${char} R`);
-    fewest_rules.push(`RETURN ${char} RETURN ${char} L`);
-}
-
-fewest_steps.push(`INIT + INIT | R`);
-fewest_steps.push(`INIT _ Count_1 _ L`);
-
+import { MNG_ARENA } from '../MNG_ARENA.js';
+const line_counter = new MNG_ARENA("lines_count");
+const all_letters = "abcdefghijklmnopqrstuvwxyzäöõü-";
 const MAX_N = 699;
-for (let n = 1; n <= MAX_N; n++) {
-    fewest_steps.push(`Count_${n} . Count_${n} _ L`)
-    fewest_steps.push(`Count_${n} | Count_${n + 1} _ L`)
-    if (n === 1) {
-        fewest_steps.push(`Count_${n} _ HALT | L`)
-    } else {
-        fewest_steps.push(`Count_${n} _ Count_${n - 1} | L`)
-    }
 
+// Add rules for each letter
+for (const char of all_letters) {
+    line_counter.add_rule("INIT", char, "INIT", ".", "R");
 }
 
-// Core transitions
-fewest_rules.push(`INC + INC + R`);
-fewest_rules.push(`RETURN + RETURN + L`);
-fewest_rules.push("INC | INC | R");
-fewest_rules.push("RETURN | RETURN | L");
-fewest_rules.push("FINISH | FINISH | R");
-fewest_rules.push("INIT   + INC    _ R");
-fewest_rules.push("INC    _ RETURN | L");
-fewest_rules.push("RETURN _ INIT   _ R");
-fewest_rules.push("INIT   | FINISH | R");
-fewest_rules.push("INIT   _ HALT   | R");
-fewest_rules.push("FINISH _ HALT   | R");
+// Special character rules
+line_counter.add_rule("INIT", "+", "INIT", "|", "R");
+line_counter.add_rule("INIT", "_", "Count_1", "_", "L");
 
+// Counting rules
+for (let n = 1; n <= MAX_N; n++) {
+    line_counter.add_rule(`Count_${n}`, ".", `Count_${n}`, "_", "L");
+    line_counter.add_rule(`Count_${n}`, "|", `Count_${n + 1}`, "_", "L");
 
-const output = fewest_steps.join('\n');
+    if (n === 1) {
+        line_counter.add_rule(`Count_${n}`, "_", "HALT", "|", "L");
+    } else {
+        line_counter.add_rule(`Count_${n}`, "_", `Count_${n - 1}`, "|", "L");
+    }
+}
 
-const sim = new TuringMachine(output);
-const play_test = 0
-const init_tape  = "hello+world+how-are-you"
-sim.run_machine(init_tape, play_test, true);
+const test_tape  = "hello+world+how-are-you"
 
-// const outputPath = path.join(__dirname, 'lines_count.txt');
-// fs.writeFileSync(outputPath, output);
-
+line_counter.benchmark_solution([test_tape, "cricket+is+great", "i+love+nutella"], false)
+// line_counter.test_solution(test_tape, true)
+// line_counter.save_rules(import.meta.url);
