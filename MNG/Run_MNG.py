@@ -12,7 +12,7 @@ if __name__ == "__main__":
     # Define constants
     YEAR = "MNG"
     CHALLENGE_NAME = 'Marches and Gnatts'
-    DAYS_TO_RUN = range(0, 11)
+    DAYS_TO_RUN = range(0, 20)
     COLOR_MNG = "#CE7004"
     NUM_ITERATIONS = 3  # Number of iterations for benchmarking
 
