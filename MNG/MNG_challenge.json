@@ -2,8 +2,8 @@
     "challenge_id": "MNG",
     "problem_title": "Quest",
     "challenge_folder": "MNG",
-    "problem_folder": "{problem_no:02d}",
-    "solution_pattern": "MNGDay{problem_no:02d}.{lang}",
+    "problem_folder": "Quest_{problem_no:02d}",
+    "solution_pattern": "MNGQuest_{problem_no:02d}.{lang}",
     "challenge_header": "Marches & Gnats: Turing Machines",
     "plot_color": "#CE7004"
 }
