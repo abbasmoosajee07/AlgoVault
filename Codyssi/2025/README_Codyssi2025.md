@@ -1,5 +1,5 @@
 # Codyssi Problems - 2025 Challenges
-![Codyssi 2025 Run Time](Codyssi_Log_plot.png)
+![Codyssi 2025 Run Time](analysis/Codyssi_Log_plot.png)
 
 ## Day-by-Day Coding Overview
 

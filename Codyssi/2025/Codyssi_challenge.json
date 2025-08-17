@@ -1,0 +1,9 @@
+{
+    "challenge_id": "Codyssi",
+    "problem_title": "Problem",
+    "challenge_folder": "2025",
+    "problem_folder": "{problem_no:02d}",
+    "solution_pattern": "CodyssiDay{problem_no:02d}.{lang}",
+    "challenge_header": "Codyssi 2025: Journey to Atlantis",
+    "plot_color": "#CE7004"
+}

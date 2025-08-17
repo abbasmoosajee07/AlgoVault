@@ -1,3 +1,6 @@
 [submodule "MNG/TuringMachineSim"]
 	path = MNG/TuringMachineSim
 	url = https://github.com/abbasmoosajee07/TuringMachineSim
+[submodule "challenge_utils"]
+	path = challenge_utils
+	url = https://github.com/abbasmoosajee07/challenge_utils.git

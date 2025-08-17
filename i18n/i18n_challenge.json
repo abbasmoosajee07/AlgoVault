@@ -1,0 +1,9 @@
+{
+    "challenge_id": "i18n",
+    "problem_title": "Puzzle",
+    "challenge_folder": "i18n",
+    "problem_folder": "{problem_no:02d}",
+    "solution_pattern": "i18nDay{problem_no:02d}.{lang}",
+    "challenge_header": "Internationali­zation Puzzles",
+    "plot_color": "#673147"
+}

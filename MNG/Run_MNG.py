@@ -5,24 +5,28 @@
 # Brief: [Run all MNG scripts]
 
 #!/usr/bin/env python3
-import os
-from Benchmarks.execute_challenge import execute_challenge_scripts
+
+from pathlib import Path
+from challenge_utils.ChallengeBenchmarks import ChallengeBenchmarks
 
 if __name__ == "__main__":
-    # Define constants
-    YEAR = "MNG"
-    CHALLENGE_NAME = 'Marches and Gnatts'
-    DAYS_TO_RUN = range(0, 20)
-    COLOR_MNG = "#CE7004"
-    NUM_ITERATIONS = 3  # Number of iterations for benchmarking
 
-    # Get the directory of the current script
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    repo_dir = os.path.abspath(script_dir)  # Repo directory (same level as script)
-    base_dir = os.path.abspath(os.path.join(os.getcwd(), str(YEAR)))
-    selected_dir = repo_dir
-    # Print repo directory for debugging purposes
-    print(f"Repository Directory: {selected_dir}")
+    base_dir = Path.cwd() / str("MNG")
+    script_dir = Path(__file__).parent.resolve()
+    selected_dir = base_dir
+    config_file = "MNG_challenge.json"
+    PROBLEMS_TO_RUN = list(range(1, 26))  # Problems 1-25
 
-    # Execute the challenge scripts
-    execute_challenge_scripts(CHALLENGE_NAME, YEAR, DAYS_TO_RUN, selected_dir, NUM_ITERATIONS, COLOR_MNG, save_file=True)
+    analyzer = ChallengeBenchmarks(
+        base_dir = selected_dir,
+        config_file = config_file,
+    )
+
+    results = analyzer.analyze(
+        problems_to_run= PROBLEMS_TO_RUN,  # Problems 1-25
+        iterations=3,
+        save_results=True,
+    )
+
+    print("\nAnalysis complete!")
+    print(results.head(25))

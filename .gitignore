@@ -3,3 +3,4 @@
 !i18n/**/Day??_input.txt
 __pycache__/
 *.exe
+*.egg-info

@@ -1,5 +1,12 @@
 {
-    "python-envs.defaultEnvManager": "ms-python.python:system",
-    "python-envs.pythonProjects": [],
-    "python.analysis.extraPaths": ["./MNG/TuringMachineSim"]
+  "python-envs.defaultEnvManager": "ms-python.python:system",
+  "python-envs.pythonProjects": [],
+  "python.analysis.extraPaths": [
+    "./MNG/TuringMachineSim",
+    "challenge_utils"
+  ],
+  "python.autoComplete.extraPaths": [
+    "./MNG/TuringMachineSim",
+    "challenge_utils"
+  ]
 }
