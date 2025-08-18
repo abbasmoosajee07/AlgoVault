@@ -8,5 +8,6 @@
   "python.autoComplete.extraPaths": [
     "./MNG/TuringMachineSim",
     "challenge_utils"
-  ]
+  ],
+  "C_Cpp.dimInactiveRegions": false
 }

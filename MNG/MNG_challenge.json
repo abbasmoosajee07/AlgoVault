@@ -1,9 +1,11 @@
 {
     "challenge_id": "MNG",
+    "text_input": "Day{problem_no:02d}_input",
     "problem_title": "Quest",
     "challenge_folder": "MNG",
     "problem_folder": "Quest_{problem_no:02d}",
-    "solution_pattern": "MNGQuest_{problem_no:02d}.{lang}",
+    "solution_file": "MNGQuest_{problem_no:02d}.{lang}",
     "challenge_header": "Marches & Gnats: Turing Machines",
-    "plot_color": "#CE7004"
+    "plot_color": "#CE7004",
+    "script_header": "Marches And Gnatts - Quest {problem_no}\nSolution Started: {month} {current_time.tm_mday}, {current_time.tm_year}\nPuzzle Link: https://mng.quest/quest/{problem_no}/\nSolution by: {author}\nBrief: [Code/Problem Description]"
 }

@@ -26,6 +26,7 @@ if __name__ == "__main__":
         problems_to_run= PROBLEMS_TO_RUN,  # Problems 1-25
         iterations=3,
         save_results=True,
+        custom_dir= script_dir / "analysis"
     )
 
     print("\nAnalysis complete!")

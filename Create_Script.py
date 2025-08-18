@@ -1,82 +1,38 @@
-# Use Setup scripts to create a script for any day/ year
-import sys, os, time
+import sys
+import logging
+from pathlib import Path
+from typing import Optional, Dict, Any, Tuple
+from challenge_utils.ScriptBuilder import ScriptBuilder
 
-# Import individual setup functions
-from Polyglot_Setups.Setup_C import create_c_script
-from Polyglot_Setups.Setup_Julia import create_julia_script
-from Polyglot_Setups.Setup_Python import create_python_script
-from Polyglot_Setups.Setup_JS import create_javascript_script
-from Polyglot_Setups.Setup_Ruby import create_ruby_script
-from Polyglot_Setups.Setup_Txt import create_txt_file
+# Constants
+PROBLEM_NO = 14
+CHALLENGE = "MNG"
+CHOSEN_LANGUAGE = "js"
 
-# Define default values for variables within the script
-day = 0
-year = "MNG"
-author_name = "Abbas Moosajee"
+AUTHOR = "Abbas Moosajee"
 
-# Define a dictionary for language options
-language_script_create_functions = {
-    "python": create_python_script,
-    "c": create_c_script,
-    "julia": create_julia_script,
-    "ruby": create_ruby_script,
-    "js": create_javascript_script,
+CONFIG_DICT = {
+    "MNG": ("MNG", "MNG_challenge.json"),
 }
 
-# Define the selected language/script type (change this variable as needed)
-selected_language = "js"  # Choose between "python", "c", "julia", "ruby"
-repo_dir = os.path.dirname(os.path.abspath(__file__))
-def generate_header(day, year, author):
-    """
-    Generate the header for the script.
+def main() -> None:
+    """Main function to create challenge files."""
 
-    Parameters:
-        day (int): The day of the Code challenge.
-        year (int): The year of the Code challenge.
-        author (str): The name of the author.
+    repo_dir = Path(__file__).parent
+    folder, config_file = CONFIG_DICT[CHALLENGE]
+    challenge_dir = repo_dir / folder
 
-    Returns:
-        str: The formatted header string.
-    """
-    # Get current time
-    current_time = time.localtime()
-    month = time.strftime('%b', current_time)
+    try:
+        builder = ScriptBuilder(AUTHOR, challenge_dir, config_file)
 
-    # Construct the header content
-    header_dict = {
-    "MNG": f"""Marches And Gnatts - Puzzle {day}
-Solution Started: {month} {current_time.tm_mday}, {current_time.tm_year}
-Puzzle Link: https://mng.quest/quest/{day}/
-Solution by: {author}
-Brief: [Code/Problem Description]
-"""}
-    return header_dict[year]
+        filepath = builder.create_files(
+            prob_no=PROBLEM_NO,
+            language=CHOSEN_LANGUAGE,
+            txt_files=1,
+        )
 
-def main():
-    """
-    Main function to always run the txt setup and then the selected language setup.
-    """
-    print(f"\nChallenge Code - Day {day}, Year {year}")
-    # Always run the Txt File setup first
-    print("\nSelected Txt file setup...")
-    create_txt_file(day=day, year=year, author=author_name,repo_dir=repo_dir)
-
-    # Map the selected language to the corresponding setup function
-    language_create_function = language_script_create_functions.get(selected_language)
-
-    if language_create_function:
-        print(f"\nSelected {selected_language.capitalize()} script setup.")
-
-        # Generate header for the selected script
-        header = generate_header(day, year, author_name)
-
-        # Pass the generated header to the language setup function
-        language_create_function(day=day, year=year, author=author_name,
-                                    header_text=header, repo_dir = repo_dir)
-    else:
-        print(f"Error: No setup function found for {selected_language}. Exiting.")
-        sys.exit(1)
-    print(f"\nCreated all necessary files")
+    except Exception as e:
+        print(f"An error occurred: {e}")
 
 if __name__ == "__main__":
     main()

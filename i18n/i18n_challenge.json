@@ -1,9 +1,11 @@
 {
     "challenge_id": "i18n",
+    "text_input": "Day{problem_no:02d}_input",
     "problem_title": "Puzzle",
     "challenge_folder": "i18n",
     "problem_folder": "{problem_no:02d}",
-    "solution_pattern": "i18nDay{problem_no:02d}.{lang}",
+    "solution_file": "i18nDay{problem_no:02d}.{lang}",
     "challenge_header": "Internationali­zation Puzzles",
-    "plot_color": "#673147"
+    "plot_color": "#673147",
+    "script_header": "i18n Puzzles - Puzzle {problem_no}\nSolution Started: {month} {current_time.tm_mday},\nPuzzle Link: https://i18n-puzzles.com/puzzle/{problem_no}\nSolution by: {author}\nBrief: [Code/Problem Description]"
 }
