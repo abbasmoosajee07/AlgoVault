@@ -7,7 +7,7 @@
 #!/usr/bin/env python3
 
 from pathlib import Path
-from challenge_utils.ChallengeBenchmarks import ChallengeBenchmarks
+from challenge_utils import ChallengeBenchmarks
 
 if __name__ == "__main__":
 
