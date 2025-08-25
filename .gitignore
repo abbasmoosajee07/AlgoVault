@@ -1,6 +1,18 @@
 # Ignore all DayXX_input.txt files in any subdirectory
 **/Day??_input.txt
+
+# But keep them if they are inside any i18n/ folder
 !i18n/**/Day??_input.txt
+
+# Ignore Python cache
 __pycache__/
+
+# Ignore Rust / Cargo build artifacts
+**/target/
+
+# Ignore compiled binaries (C, C++, Rust, etc.)
 *.exe
+*.pdb
+
+# Ignore Python package metadata
 *.egg-info
