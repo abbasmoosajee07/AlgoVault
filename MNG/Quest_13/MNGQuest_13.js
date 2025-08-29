@@ -11,7 +11,7 @@ Brief: [Unary Sort]
 
 import { MNG_ARENA } from '../MNG_ARENA.js';
 
-const unarySortTM = new MNG_ARENA("unary_sort");
+const unarySortTM = new MNG_ARENA("Quest13_input");
 const MAX_NUMBER_SIZE = 357;
 
 // ==== INITIALIZATION ====

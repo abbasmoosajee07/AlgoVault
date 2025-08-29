@@ -1,5 +1,0 @@
-
-INIT | ODD  _ R
-ODD  | INIT _ R
-ODD  _ HALT O R
-INIT _ HALT E R

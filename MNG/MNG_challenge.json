@@ -1,6 +1,6 @@
 {
     "challenge_id": "MNG",
-    "text_input": "Day{problem_no:02d}_input",
+    "text_input": "Quest{problem_no:02d}_input",
     "problem_title": "Quest",
     "challenge_folder": "MNG",
     "problem_folder": "Quest_{problem_no:02d}",

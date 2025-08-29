@@ -8,7 +8,7 @@ Brief: [Text Mirror]
 
 import { MNG_ARENA } from '../MNG_ARENA.js';
 
-const text_mirror = new MNG_ARENA("text_mirror");
+const text_mirror = new MNG_ARENA("Quest08_input");
 const valid_letters = "abcdefghijklmnopqrstuvwxyzäöõü-";
 const extra_symbols = ":.";
 

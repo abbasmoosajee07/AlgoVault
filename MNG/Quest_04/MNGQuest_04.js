@@ -32,7 +32,7 @@ nextB | nextB | L
 `;
 
 
-const unary_mult = new MNG_ARENA("unary_multiplication")
+const unary_mult = new MNG_ARENA("Quest04_input")
 unary_mult.full_solution(unary_mult_rules);
 unary_mult.benchmark_solution(["||*|||", "||||*|||", "||||||||*|||"], false)
 // unary_mult.test_solution("||*|||", true)

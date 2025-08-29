@@ -29,6 +29,7 @@ Here's your combined table with all **Quest titles, descriptions, links, steps, 
 | Quest 11 | Decimal Increment           | Increment a decimal number by one.                | [View Solution](11/MNGDay11.js) | 444       | 22    |
 | Quest 12 | Decimal Addition           | Add up two decimal numbers.                | [View Solution](12/MNGDay12.js) | 58687       | 118    |
 | Quest 13 | Unary Array Sort           | Sort a list of unary numbers                | [View Solution](13/MNGDay13.js) | 2,698,859       | 2,182    |
-| Quest 14 | Binary to Decimal           | Sonvert a binary num to decimal                | [View Solution](13/MNGDay13.js) | 160,454       | 30    |
+| Quest 14 | Binary to Decimal           | Convert a binary num to decimal                | [View Solution](14/MNGDay14.js) | 160,454       | 30    |
 
+| Quest 15 | SQUARE ROOT           | Calculate Sqaure root of a unary number                | [View Solution](15/MNGDay15.js) |        |     |
 ---

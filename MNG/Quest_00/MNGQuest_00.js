@@ -13,7 +13,7 @@ FIND | FIND | R
 FIND _ HALT | R
 `;
 
-const unary_inc = new MNG_ARENA("unary_increment")
+const unary_inc = new MNG_ARENA("Quest00_input")
 unary_inc.full_solution(unary_inc_rules);
 unary_inc.benchmark_solution(["||||", "||", "|||"], false)
 // unary_inc.test_solution("||||", true)

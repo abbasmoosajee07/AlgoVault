@@ -37,7 +37,7 @@ NUM  9 NUM  0 L
 NUM  _ HALT 1 R
 `;
 
-const dec_inc = new MNG_ARENA("decimal_increment")
+const dec_inc = new MNG_ARENA("Quest11_input")
 dec_inc.full_solution(dec_inc_rules);
 dec_inc.benchmark_solution(["13", "41", "69"], false)
 // dec_inc.test_solution("13", true)

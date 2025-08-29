@@ -38,6 +38,24 @@ class MNG_ARENA {
         this.rules.push(parts.join(" "));
     }
 
+    find_state(fromState, needle, ignoring, searchDir, toState, toSymbol, toDir = null) {
+        // Ignore given symbols while moving in searchDir
+        for (let ignore_sym of ignoring){
+            this.ignore(fromState, ignore_sym, searchDir);
+        }
+
+        // Default direction: opposite of searchDir
+        const moveDir = toDir !== null ? toDir : (searchDir === "L" ? "R" : "R");
+
+        if (needle instanceof Set) {
+            for (let n of needle) {
+                this.add_rule(fromState, n, toState, toSymbol, moveDir);
+            }
+        } else {
+            this.add_rule(fromState, needle, toState, toSymbol, moveDir);
+        }
+    }
+
     test_solution(test_tape, visualize = true) {
         if (this.rules.length === 0) {
             throw new Error("No rules have been defined. Cannot run test_solution.");

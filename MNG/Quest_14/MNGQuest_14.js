@@ -40,8 +40,8 @@ CLEAN 1 CLEAN _ R
 CLEAN _ HALT _ L
 `;
 
-const bin_dec = new MNG_ARENA("bin_to_dec")
+const bin_dec = new MNG_ARENA("Quest14_input")
 bin_dec.full_solution(dec_inc_rules);
 bin_dec.benchmark_solution(["1010", "1111", "101010110001"], false)
 // bin_dec.test_solution("1010", true)
-bin_dec.save_rules(import.meta.url);
+// bin_dec.save_rules(import.meta.url);

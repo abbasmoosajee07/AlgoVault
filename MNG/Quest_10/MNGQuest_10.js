@@ -9,7 +9,7 @@ Brief: [Lines Count]
  * Author: Abbas Moosajee
  */
 import { MNG_ARENA } from '../MNG_ARENA.js';
-const line_counter = new MNG_ARENA("lines_count");
+const line_counter = new MNG_ARENA("Quest10_input");
 const all_letters = "abcdefghijklmnopqrstuvwxyzäöõü-";
 const MAX_N = 699;
 

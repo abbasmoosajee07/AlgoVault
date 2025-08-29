@@ -13,7 +13,7 @@ Brief: [Unary Comparison]
 import { MNG_ARENA } from '../MNG_ARENA.js';
 
 const MAX_N = 200;
-const unary_compare = new MNG_ARENA("unary_comparison");
+const unary_compare = new MNG_ARENA("Quest09_input");
 
 // Add the main rules using MNG_ARENA methods
 unary_compare.ignore("CheckEqual", "|", "L");

@@ -15,7 +15,7 @@ ODD  _ HALT O R
 INIT _ HALT E R
 `;
 
-const unary_even_odd = new MNG_ARENA("unary_even_odd")
+const unary_even_odd = new MNG_ARENA("Quest02_input")
 unary_even_odd.full_solution(unary_eo_rules);
 unary_even_odd.benchmark_solution(["|||||||", "|||||", "||||"], false)
 // unary_even_odd.test_solution("|||||||", true)

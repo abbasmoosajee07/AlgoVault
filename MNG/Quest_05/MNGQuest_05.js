@@ -12,7 +12,7 @@ import { MNG_ARENA } from '../MNG_ARENA.js';
 
 
 const MAX_N = 44;
-const unary_array = new MNG_ARENA("unary_array");
+const unary_array = new MNG_ARENA("Quest05_input");
 
 // INIT rule
 unary_array.add_rule("INIT", "|", "Count_1", "_", "R");

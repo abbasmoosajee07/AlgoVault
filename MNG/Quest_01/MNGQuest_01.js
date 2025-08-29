@@ -13,8 +13,8 @@ FIND | FIND | R
 FIND + HALT | R
 `;
 
-const unary_add = new MNG_ARENA("unary_addition")
+const unary_add = new MNG_ARENA("Quest01_input")
 unary_add.full_solution(unary_add_rules);
 unary_add.benchmark_solution(["|||+||||", "|+|", "|||+||||"], false)
 // unary_add.test_solution("|||+||||", true)
-// unary_add.save_rules(import.meta.url);
+unary_add.save_rules(import.meta.url);

@@ -14,7 +14,7 @@ import { MNG_ARENA } from '../MNG_ARENA.js';
 const LETTERS = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j'];
 const MAX_N = 9;
 
-const dec_add = new MNG_ARENA("decimal_addition");
+const dec_add = new MNG_ARENA("Quest12_input");
 
 // INIT rules
 for (let n = 0; n <= MAX_N; n++) {

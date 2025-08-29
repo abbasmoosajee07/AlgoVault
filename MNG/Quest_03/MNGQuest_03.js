@@ -18,8 +18,8 @@ FIND 0 HALT 1 R
 FIND _ HALT 1 R
 `;
 
-const binary_inc = new MNG_ARENA("unary_binary_inc")
+const binary_inc = new MNG_ARENA("Quest03_input")
 binary_inc.full_solution(binary_inc_rules);
 binary_inc.benchmark_solution(["1010", "111", "1011"], false)
 // binary_inc.test_solution("1010", true)
-// binary_inc.save_rules(import.meta.url);
+binary_inc.save_rules(import.meta.url);

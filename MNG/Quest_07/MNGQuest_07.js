@@ -11,7 +11,7 @@ Brief: [Letter Mark]
 import { MNG_ARENA } from '../MNG_ARENA.js';
 
 
-const letter_mark = new MNG_ARENA("letter_mark");
+const letter_mark = new MNG_ARENA("Quest07_input");
 const valid_letters = "abcdefghijklmnopqrstuvwxyzäöõü-";
 const extra_symbols = "[]:";
 

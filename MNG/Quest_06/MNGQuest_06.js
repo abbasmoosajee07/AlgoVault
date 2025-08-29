@@ -10,7 +10,7 @@ Brief: [Unary Subtraction]
 import { MNG_ARENA } from '../MNG_ARENA.js';
 
 const MAX_N = 100;
-const unary_sub = new MNG_ARENA("unary_subtraction");
+const unary_sub = new MNG_ARENA("Quest06_input");
 
 // Starting rule
 unary_sub.add_rule("INIT", "|", "Count_1", "_", "R");

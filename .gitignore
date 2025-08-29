@@ -1,5 +1,6 @@
 # Ignore all DayXX_input.txt files in any subdirectory
 **/Day??_input.txt
+**/Quest??_input.txt
 
 # But keep them if they are inside any i18n/ folder
 !i18n/**/Day??_input.txt
