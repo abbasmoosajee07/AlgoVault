@@ -1,0 +1,11 @@
+{
+    "challenge_id": "eldarverse",
+    "text_input": "problem-sep-25-long-{problem_no}-input",
+    "problem_title": "Problem ",
+    "challenge_folder": "eldarverse",
+    "problem_folder": "Problem_{problem_no}",
+    "solution_file": "eldarverse-sep-25-{problem_no}.{lang}",
+    "challenge_header": "Eldarverse Sep 25 Puzzles",
+    "plot_color": "#673147",
+    "script_header": "Eldarverse Puzzles - Problem {problem_no}\nSolution Started: {month} {current_time.tm_mday},\nPuzzle Link: https://www.eldarverse.com/problem/sep-25-long-{problem_no}\nSolution by: {author}\nBrief: [Code/Problem Description]"
+}
