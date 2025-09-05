@@ -17,5 +17,6 @@ This project contains a Python script (`CreateScript.py`) that can be used to cr
 | [Synacor Challenge](https://github.com/Aneurysm9/vm_challenge/tree/main)(archive)      | Virtual Machine | [Link](/synacor) | 1       | 1         | ✅ Done  |
 | [Marches & Gnatts](https://www.cryptopals.com/)      | Challenges | [Link](/MNG) | 11+       | 11         | Active  |
 | [Cryptopals](https://mng.quest/)      | Challenges | [Link](https://github.com/abbasmoosajee07/cryptopals) | 66       | 1         | Ongoing  |
+| [Eldarverse](https://www.eldarverse.com/)      | Challenges | [Link](/eldarverse/sep_25/) | 14       | 8         | Ongoing  |
 -------------
 
