@@ -31,5 +31,6 @@ Here's your combined table with all **Quest titles, descriptions, links, steps, 
 | Quest 13 | Unary Array Sort           | Sort a list of unary numbers                | [View Solution](13/MNGDay13.js) | 2,698,859       | 2,182    |
 | Quest 14 | Binary to Decimal           | Convert a binary num to decimal                | [View Solution](14/MNGDay14.js) | 160,454       | 30    |
 
-| Quest 15 | SQUARE ROOT           | Calculate Sqaure root of a unary number                | [View Solution](15/MNGDay15.js) |        |     |
+| Quest 15 | SQUARE ROOT           | Calculate Sqaure root of a unary number                | [View Solution](15/MNGDay15.js) |78 727 206|1479|
+| Quest 16 | ROMAN UNARY           | Conver roman number to unary number                | [View Solution](15/MNGDay15.js) |164722|1086|
 ---
