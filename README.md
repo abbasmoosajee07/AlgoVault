@@ -15,8 +15,9 @@ This project contains a Python script (`CreateScript.py`) that can be used to cr
 | [piDay](https://ivanr3d.com/projects/pi/)             | 2024/2025 | [Link](/pi)   | 2       | 2         | ✅ Done  |
 | [i18n Challenges](https://i18n-puzzles.com/)             | 20 Puzzles| [Link](/i18n)   | 20      | 20        | ✅ Done  |
 | [Synacor Challenge](https://github.com/Aneurysm9/vm_challenge/tree/main)(archive)      | Virtual Machine | [Link](/synacor) | 1       | 1         | ✅ Done  |
-| [Marches & Gnatts](https://www.cryptopals.com/)      | Challenges | [Link](/MNG) | 11+       | 11         | Active  |
+| [Marches & Gnatts](https://www.cryptopals.com/)      | Challenges | [Link](/MNG) | >15       | 16         | Active  |
 | [Cryptopals](https://mng.quest/)      | Challenges | [Link](https://github.com/abbasmoosajee07/cryptopals) | 66       | 1         | Ongoing  |
 | [Eldarverse](https://www.eldarverse.com/)      | Challenges | [Link](/eldarverse/sep_25/) | 14       | 8         | Ongoing  |
+| [AquaQ Challenges](https://challenges.aquaq.co.uk/)      | Challenges | [Link](/AquaQ/) | 41       | 2         | Ongoing  |
 -------------
 

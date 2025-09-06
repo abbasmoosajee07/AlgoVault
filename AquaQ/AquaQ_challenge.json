@@ -1,0 +1,11 @@
+{
+    "challenge_id": "AquaQ",
+    "text_input": "Challenge_{problem_no:02d}_input",
+    "problem_title": "Challenge",
+    "challenge_folder": "AquaQ",
+    "problem_folder": "Challenge_{problem_no:02d}",
+    "solution_file": "AquaQ_{problem_no:02d}.{lang}",
+    "challenge_header": "AquaQ Challenges",
+    "plot_color": "#00B5E2",
+    "script_header": "AquaQ Puzzles - Puzzle {problem_no}\nSolution Started: {month} {current_time.tm_mday}{current_time.tm_year},\nPuzzle Link: https://challenges.aquaq.co.uk/challenge/{problem_no}\nSolution by: {author}\nBrief: [Code/Problem Description]"
+}
