@@ -13,7 +13,7 @@ if __name__ == "__main__":
 
     base_dir = Path.cwd() / "AquaQ"
     script_dir = Path(__file__).parent.resolve()
-    selected_dir = base_dir
+    selected_dir = script_dir
     config_file = "AquaQ_challenge.json"
     PROBLEMS_TO_RUN = list(range(0, 41))  # Problems 1-25
 

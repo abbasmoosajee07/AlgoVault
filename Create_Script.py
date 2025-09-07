@@ -2,14 +2,15 @@ from pathlib import Path
 from challenge_utils import ScriptBuilder
 
 # Constants
-PROBLEM_NO = 14
-CHALLENGE = "MNG"
-CHOSEN_LANGUAGE = "js"
+PROBLEM_NO = 2
+CHALLENGE = "aquaq"
+CHOSEN_LANGUAGE = "rust"
 
 AUTHOR = "Abbas Moosajee"
 
 CONFIG_DICT = {
     "MNG": ("MNG", "MNG_challenge.json"),
+    "aquaq": ("AquaQ", "AquaQ_challenge.json"),
 }
 
 def main() -> None:
