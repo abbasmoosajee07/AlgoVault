@@ -2,7 +2,7 @@
 name = "AquaQ"
 version = "0.1.0"
 edition = "2024"
-default-run = "run_all"
+default-run = "AquaQ_02"
 
 [dependencies]
 
@@ -17,6 +17,10 @@ path = "src/bin/AquaQ_00.rs"
 [[bin]]
 name = "AquaQ_01"
 path = "src/bin/AquaQ_01.rs"
+
+[[bin]]
+name = "AquaQ_02"
+path = "src/bin/AquaQ_02.rs"
 
 [profile.dev]
 debug = 0   # 🚫 no debug info → no .pdb files
