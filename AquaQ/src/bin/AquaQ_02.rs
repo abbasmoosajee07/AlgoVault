@@ -38,6 +38,6 @@ fn main() -> Result<(), Box<dyn Error>> {
 
 
     let sum: i32 = num_list.iter().sum();
-    println!("Final Sum: {}", sum);
+    println!("Challenge 02: {}", sum);
     Ok(())
 }
