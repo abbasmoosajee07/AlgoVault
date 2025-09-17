@@ -10,17 +10,5 @@ default-run = "AquaQ_02"
 name = "run_all"
 path = "runAquaQ.rs"
 
-[[bin]]
-name = "AquaQ_00"
-path = "src/bin/AquaQ_00.rs"
-
-[[bin]]
-name = "AquaQ_01"
-path = "src/bin/AquaQ_01.rs"
-
-[[bin]]
-name = "AquaQ_02"
-path = "src/bin/AquaQ_02.rs"
-
 [profile.dev]
 debug = 0   # 🚫 no debug info → no .pdb files
