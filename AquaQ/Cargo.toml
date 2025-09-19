@@ -2,7 +2,7 @@
 name = "AquaQ"
 version = "0.1.0"
 edition = "2024"
-default-run = "AquaQ_02"
+default-run = "run_all"
 
 [dependencies]
 
