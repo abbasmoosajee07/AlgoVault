@@ -4,7 +4,8 @@
 **/problem-*-?-input.txt
 **/problem-*-?-output.txt
 **/inputs
-
+**/problem-*-??-input.txt
+**/problem-*-??-output.txt
 
 # But keep them if they are inside any i18n/ folder
 !i18n/**/Day??_input.txt
