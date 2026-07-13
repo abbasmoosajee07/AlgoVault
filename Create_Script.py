@@ -2,8 +2,8 @@ from pathlib import Path
 from challenge_utils import ScriptBuilder
 
 # Constants
-PROBLEM_NO = "1C"
-CHALLENGE = "eldarverse"
+PROBLEM_NO = "02"
+CHALLENGE = "flipflop"
 CHOSEN_LANGUAGE = "python"
 
 AUTHOR = "Abbas Moosajee"
@@ -12,6 +12,7 @@ CONFIG_DICT = {
     "MNG": ("MNG", "MNG_challenge.json"),
     "aquaq": ("AquaQ", "AquaQ_challenge.json"),
     "eldarverse": ("eldarverse/halloween25", "eldarverse-halloween25.json"),
+    "flipflop": ("flipflop/2025", "flipflop_25.json"),
 }
 
 def main() -> None:

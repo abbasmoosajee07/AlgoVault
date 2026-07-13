@@ -1,0 +1,11 @@
+{
+    "challenge_id": "flipflop25",
+    "text_input": "puzzle_{problem_no}_input",
+    "problem_title": "Problem ",
+    "challenge_folder": "flipflop",
+    "problem_folder": "Puzzle_{problem_no}",
+    "solution_file": "flipflop25_{problem_no}.{lang}",
+    "challenge_header": "FlipFlop Codes Year 2025",
+    "plot_color": "#FFA500",
+    "script_header": "FlipFlop Codes Puzzles - Puzzle {problem_no}\nSolution Started: {month} {current_time.tm_mday}, {current_time.tm_year}\nPuzzle Link: https://flipflop.slome.org/2025/{problem_no}\nSolution by: {author}\nBrief: [Code/Problem Description]"
+}

@@ -6,6 +6,7 @@
 **/inputs
 **/problem-*-??-input.txt
 **/problem-*-??-output.txt
+**/puzzle_??_input.txt
 
 # But keep them if they are inside any i18n/ folder
 !i18n/**/Day??_input.txt
