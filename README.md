@@ -19,5 +19,6 @@ This project contains a Python script (`CreateScript.py`) that can be used to cr
 | [Cryptopals](https://mng.quest/)      | Challenges | [Link](https://github.com/abbasmoosajee07/cryptopals) | 66       | 9         | Ongoing  |
 | [Eldarverse](https://www.eldarverse.com/)      | Challenges | [Link](/eldarverse/sep_25/) | 14       | 14         | Done(sep-25)  |
 | [AquaQ Challenges](https://challenges.aquaq.co.uk/)      | Challenges | [Link](/AquaQ/) | 41       | 3         | Ongoing  |
+| [FlipFlop Codes](https://flipflop.slome.org/)      | Puzzles | [Link](/flipflop/) | 25, 26       | 2         | Ongoing  |
 -------------
 

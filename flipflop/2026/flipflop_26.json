@@ -1,0 +1,11 @@
+{
+    "challenge_id": "flipflop_26",
+    "text_input": "puzzle_{problem_no:02d}_input",
+    "problem_title": "Puzzle",
+    "challenge_folder": "2026",
+    "problem_folder": "Puzzle_{problem_no:02d}",
+    "solution_file": "flipflop26_{problem_no:02d}.{lang}",
+    "challenge_header": "FlipFlop 2026: BitFlop Internship",
+    "plot_color": "#FFA500",
+    "script_header": "FlipFlop 2026: BitFlop Internship - Puzzle {problem_no}\nSolution Started: {month} {current_time.tm_mday}, {current_time.tm_year}\nPuzzle Link: https://flipflop.slome.org/2026/{problem_no}\nSolution by: {author}\nBrief: [Code/Problem Description]"
+}
