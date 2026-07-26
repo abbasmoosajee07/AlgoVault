@@ -2,7 +2,7 @@
 Solution Started: July 24, 2026
 Puzzle Link: https://flipflop.slome.org/2026/7
 Solution by: Abbas Moosajee
-Brief: [Code/Problem Description]"""
+Brief: [Ross's Pet Snake]"""
 
 #!/usr/bin/env python3
 from pathlib import Path
@@ -65,7 +65,7 @@ class Snake:
                 next_sushi = avail_sushi.pop(0) if avail_sushi else None
             snake_body = new_body
             pos = npos
-        return( len(snake_body)) * self_eaten
+        return len(snake_body) * self_eaten
 
 ross_snake  = Snake(data[0], data[1], (30, 30))
 print("FlipFlop 2026, Puzzle 07")
