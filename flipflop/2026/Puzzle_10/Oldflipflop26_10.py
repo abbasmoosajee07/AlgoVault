@@ -7,6 +7,7 @@ Brief: [The Banena™ Programming Language]"""
 #!/usr/bin/env python3
 from pathlib import Path
 from collections import defaultdict, deque, Counter
+import time
 
 # Load input file
 input_file = "puzzle_10_input.txt"
@@ -86,9 +87,14 @@ class BanenaProg:
         self.pointer = 0
         self.preprocess_labels()
         self.counter = 0
+        visited = set()
 
         while self.pointer < len(self.main_prog):
             self.counter += 1
+            state = (self.pointer, tuple(self.registers))
+            if state in visited:
+                return False
+            visited.add(state)
             if self.counter >= 5000000:
                 return False
             line = self.main_prog[self.pointer]
@@ -107,15 +113,39 @@ class BanenaProg:
 
 def run_tests(base_prog):
     infinite_count = 0
+    run_count = 0
     for init_r0 in range(99 + 1):
+        start_time = time.time()
+        run_count += 1
         test_banena = BanenaProg(base_prog)
         test_banena.registers[0] = init_r0
         completed = test_banena.run_program()
-        print(init_r0, test_banena.counter)
+        print(f"R={run_count}, Time={time.time() - start_time:.5f}s, ({init_r0}, {test_banena.counter})")
         if completed is False:
             infinite_count += 1
+            print(f"Cycle Detected IC={infinite_count}")
+    return infinite_count
+
+def run_tests_p3(base_prog):
+    infinite_count = 0
+    run_count = 0
+    for init_r1 in range(3 + 1):
+        r1_time = time.time()
+        for init_r0 in range(65535 + 1): # 65535
+            start_time = time.time()
+            run_count += 1
+            test_banena = BanenaProg(base_prog)
+            test_banena.registers[0] = init_r0
+            test_banena.registers[1] = init_r1
+            completed = test_banena.run_program()
+            if init_r0 % 1000 == 0:
+                print(f"R={run_count}, Time={time.time() - start_time:.5f}s,IC={infinite_count}, (({init_r1},{init_r0}), {test_banena.counter})")
+            if completed is False:
+                infinite_count += 1
+        print(f"R1 = {init_r1}, IC={infinite_count}, Time={time.time() - r1_time:.5f}s")
     return infinite_count
 
 print("FlipFlop 2026, Puzzle 10")
 print("Part 1:", BanenaProg(data).run_program()[0])
-print("Part 2:", run_tests(data))
+# print("Part 2:", run_tests(data))
+# print("Part 3:", run_tests_p3(data))
